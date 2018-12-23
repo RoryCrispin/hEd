@@ -1,0 +1,3 @@
+this is my file
+it has three lines
+this is the third
