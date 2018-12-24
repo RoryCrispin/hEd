@@ -36,15 +36,14 @@ data Target = Line Int
             | Range (Int, Int)
             deriving (Read, Show, Eq)
 
-data Command = Command {op :: Operator,
-                        target :: Maybe Target}
-               deriving (Show, Eq)
-
-x = [TokOp Print, TokNum 4]
+data Command = Command {
+  target :: Maybe Target,
+  op :: Operator
+  } deriving (Show, Eq)
 
 parser :: [Token] -> Command
-parser (TokOp o: TokNum n: xs) = Command o (Just (Line n))
-parser (TokOp o : xs) = Command o Nothing
+parser (TokNum n : TokOp o : xs) = Command (Just (Line n)) o
+parser (TokOp o : xs) = Command  Nothing o
 
 ee :: String -> Command
 ee s = parser $ tokenize s
