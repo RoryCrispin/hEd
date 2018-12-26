@@ -41,7 +41,7 @@ number c cs =
    TokNum (read (c : digs)) : tokenize cs'
 
 data Location = Line Int
-            | Register String
+            -- | Register String
             deriving (Read, Show, Eq)
 
 -- Ranges are always a tuple with a top and bottom pointer.
