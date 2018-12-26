@@ -40,31 +40,31 @@ number c cs =
    let (digs, cs') = span isDigit cs in
    TokNum (read (c : digs)) : tokenize cs'
 
-data Target = Line Int
+data Location = Line Int
             | Register String
             deriving (Read, Show, Eq)
 
 -- Ranges are always a tuple with a top and bottom pointer.
 -- for single selections, the top == bottom.
 -- This should make things easier to reason about
-type Range = (Target, Target)
+type Target = (Location, Location)
 
-mkRange :: Target -> Range
-mkRange x = (x, x)
+mkTarget :: Location -> Target
+mkTarget x = (x, x)
 
 data Command = Command {
-  range :: Range,
+  target :: Target,
   op :: Operator
   } deriving (Show, Eq)
 
-cmdParser :: (Range, [Token]) -> Command
+cmdParser :: (Target, [Token]) -> Command
 cmdParser (r, (TokOp o : xs)) = Command (r) o
 
 -- Parses range from input tokens and returns unconsumed tokens
-parseTarget :: [Token] -> (Range, [Token])
+parseTarget :: [Token] -> (Target, [Token])
 parseTarget (TokNum n : TokKey k : TokNum m : xs) = case k of
      Comma -> ((Line n, Line m), xs)
-parseTarget (TokNum n : xs) = (mkRange (Line n), xs)
+parseTarget (TokNum n : xs) = (mkTarget (Line n), xs)
 -- parseTarget (TokIdent n : xs) = (mkRange (Register n), xs)
 -- TODO: Register support.. would be nice for $kk to be more polymorphic
 
