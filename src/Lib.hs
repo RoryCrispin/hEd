@@ -29,30 +29,28 @@ evaluate :: Command -> State -> (State, String)
 evaluate Command {op=Print, target=t} st =
   (st, (unlines (getTarget (buffer st) t)))
 
--- evaluate Command {op=Delete, target=t} st =
---   (State {
---       buffer=(deleteTarget (buffer st) t),
---       position=position st
---    }
---   , "OK")
+evaluate Command {op=Delete, target=t} st =
+  (State {
+      buffer=(deleteTarget (buffer st) t),
+      position=position st
+   }
+  , "OK")
 
 getTarget :: [a] -> Target -> [a]
 getTarget xs (topLoc, bottomLoc) =
-     let top = locationToLine topLoc in
-     let bottom = locationToLine bottomLoc in
-       if top == bottom then
-       [xs !! top]
-       else
-    take (bottom-top+1) $ drop top xs
+  let top = locationToLine topLoc in
+    let bottom = locationToLine bottomLoc in
+      if top == bottom then
+        [xs !! top]
+      else
+        take (bottom-top+1) $ drop top xs
 
 locationToLine :: Location -> Int
 locationToLine (Line x) = x
 
--- deleteTarget :: [String] -> Maybe Target -> [String]
--- deleteTarget _ Nothing = [""]
--- deleteTarget xs (Just (Line l)) = (deleteAt l xs)
--- deleteTarget xs (Just (Range _)) = [""]
+deleteTarget :: [a] -> Target  -> [a]
+deleteTarget xs (topLoc, bottomLoc) =
+  let top = locationToLine topLoc in
+    let bottom = locationToLine bottomLoc in
+      take top xs ++ drop ( bottom+1 ) xs
 
--- deleteAt :: Int -> [String] -> [String]
--- deleteAt idx xs = lft ++ rgt
---   where (lft, (_:rgt)) = splitAt idx xs
