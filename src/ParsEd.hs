@@ -1,24 +1,33 @@
 module ParsEd where
 
 import Data.Char
+import qualified Data.Map as Map
 
-data Operator = Quit | Print | Change | Delete
-    deriving (Show, Eq)
+type RegTable = Map.Map Char Target
+
+data ParserState = ParserState {
+  ps_position :: Int,
+  ps_registers :: RegTable
+  } deriving Show
+
+data Operator = Quit | Print | Change | Delete | Mark
+              deriving (Show, Eq)
 
 data Keyword = Comma
-    deriving (Show, Eq)
+             deriving (Show, Eq)
 
 data Token = TokOp Operator
-           | TokIdent String
+           | TokIdent Char
            | TokNum Int
            | TokKey Keyword
-    deriving (Show, Eq)
+           deriving (Show, Eq)
 
 operator :: Char -> Operator
 operator c | c == 'q' = Quit
            | c == 'p' = Print
            | c == 'c' = Change
            | c == 'd' = Delete
+           | c == 'k' = Mark
 
 keyword :: Char -> Keyword
 keyword k  | k == ',' = Comma
@@ -26,23 +35,18 @@ keyword k  | k == ',' = Comma
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize (c : cs)
-    | elem c "qpcd" = TokOp (operator c) : tokenize cs
-    | elem c "," = TokKey (keyword c) : tokenize cs
-    | isDigit c = number c cs
-    | isAlpha c = identifier c cs
-    | isSpace c = tokenize cs
-    | otherwise = error $ "Cannot tokenize " ++ [c]
-
-identifier c cs = let (str, cs') = span isAlphaNum cs in
-                  TokIdent (c:str) : tokenize cs'
+  | elem c "qpcdk" = TokOp (operator c) : tokenize cs
+  | elem c "," = TokKey (keyword c) : tokenize cs
+  | isDigit c = number c cs
+  | isSpace c = tokenize cs
+  | otherwise = (TokIdent c : tokenize cs)
 
 number c cs =
-   let (digs, cs') = span isDigit cs in
-   TokNum (read (c : digs)) : tokenize cs'
+  let (digs, cs') = span isDigit cs in
+    TokNum (read (c : digs)) : tokenize cs'
 
 data Location = Line Int
-            -- | Register String
-            deriving (Read, Show, Eq)
+              deriving (Read, Show, Eq)
 
 -- Ranges are always a tuple with a top and bottom pointer.
 -- for single selections, the top == bottom.
@@ -54,23 +58,44 @@ mkTarget x = (x, x)
 
 data Command = Command {
   target :: Target,
-  op :: Operator
+  op :: Operator,
+  params :: [Token]
   } deriving (Show, Eq)
 
-cmdParser :: (Target, [Token]) -> Command
-cmdParser (r, (TokOp o : xs)) = Command (r) o
+cmdParser :: (Target, [Token]) -> Either Command String
+cmdParser (r, (TokOp o : xs)) = Left $ Command r o xs
+cmdParser _ = Right "Invalid command"
 
 -- Parses range from input tokens and returns unconsumed tokens
-parseTarget :: [Token] -> (Target, [Token])
-parseTarget (TokNum n : TokKey k : TokNum m : xs) = case k of
-     Comma -> ((Line n, Line m), xs)
-parseTarget (TokNum n : xs) = (mkTarget (Line n), xs)
--- parseTarget (TokIdent n : xs) = (mkRange (Register n), xs)
--- TODO: Register support.. would be nice for $kk to be more polymorphic
+parseTarget :: [Token] -> ParserState -> Either (Target, [Token]) String
+parseTarget (TokNum n : TokKey k : TokNum m : xs) _ = case k of
+                                       Comma -> Left ((Line n, Line m), xs)
+parseTarget (TokNum n : xs) _ = Left (mkTarget (Line n), xs)
 
-baseParser :: [Token] -> Command
-baseParser xs = let (tgt, tkns) = parseTarget xs in
-  cmdParser (tgt, tkns)
+parseTarget (TokIdent i : xs) ps = case lookupReg i ps of
+                                     Nothing -> Right "Invalid register"
+                                     Just tgt -> Left (tgt, xs)
+-- Base case of no target = current line
+parseTarget xs ps = Left (mkTarget (Line (ps_position ps)), xs)
 
-ee :: String -> Command
-ee s = baseParser $ tokenize s
+
+baseParser :: [Token] -> ParserState -> Either Command String
+baseParser xs ps = case parseTarget xs ps of
+                     Left (tgt, tkns) -> case (cmdParser (tgt, tkns)) of
+                                         Left cmd -> Left cmd
+                                         Right err -> Right err
+                     Right err -> Right err
+
+
+-- TODO do we need to return ParserState or is it readonly
+ee :: String -> ParserState -> (Either Command String, ParserState)
+ee s ps = (baseParser (tokenize s) ps, ps)
+
+-- Register Table Bits
+updateReg key val table = Map.insert key val table
+
+emptyRegTable = Map.empty
+
+lookupReg :: Char -> ParserState -> Maybe Target
+lookupReg '.' ps = Just (mkTarget ( Line (ps_position ps)))
+lookupReg key ps = Map.lookup key (ps_registers ps)
