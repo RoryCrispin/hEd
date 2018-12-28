@@ -10,7 +10,7 @@ data ParserState = ParserState {
   ps_registers :: RegTable
   } deriving Show
 
-data Operator = Quit | Print | Change | Delete | Mark
+data Operator = Quit | Print | Change | Delete | Mark | Goto
               deriving (Show, Eq)
 
 data Keyword = Comma
@@ -64,7 +64,11 @@ data Command = Command {
 
 cmdParser :: (Target, [Token]) -> Either Command String
 cmdParser (r, (TokOp o : xs)) = Left $ Command r o xs
-cmdParser _ = Right "Invalid command"
+cmdParser (r, []) = Left $ Command r Goto []
+
+              -- TODO some debugging prints here to remove
+cmdParser x = Right ("Invalid command" ++ (show  (fst x)))
+
 
 -- Parses range from input tokens and returns unconsumed tokens
 parseTarget :: [Token] -> ParserState -> Either (Target, [Token]) String
@@ -85,7 +89,6 @@ baseParser xs ps = case parseTarget xs ps of
                                          Left cmd -> Left cmd
                                          Right err -> Right err
                      Right err -> Right err
-
 
 -- TODO do we need to return ParserState or is it readonly
 ee :: String -> ParserState -> (Either Command String, ParserState)

@@ -1,0 +1,19 @@
+(Known noncomplient implementation details rather than missing features)
+* Bugs 
+** Parser differenciating keywords and registers
+The parser misunderstands when registers are set to the name of commands
+for instance, 
+> 2
+move to line 2
+> 3kp
+should set 'p' to 3
+then
+> p
+should print the current line (Line 2)
+but
+> pp 
+should print Line 3
+
+In the the current implementation, the parser will read 
+'pp' as "TokOp print _" (Ignoring the second argument
+thus, printing line 3

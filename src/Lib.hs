@@ -68,6 +68,16 @@ evaluate Command {op=Mark, target=t, params=p}
            position=pos,
            registers=newRegisters}), "OK")
 
+-- The Goto command switches the current file position to the given
+-- location, and prints that line to stdout
+evaluate Command {op=Goto, target=tgt}
+  State {buffer=b, position=pos, registers=r} =
+  let newPosition = fst tgt in
+    let targetLineContents = getTarget b (mkTarget newPosition) in
+      ((State {buffer=b,
+               position=locationToLine newPosition,
+               registers=r}), head targetLineContents)
+
 evaluate Command {op=Quit} st = error "TODO quit gracefully"
 
 getTarget :: [a] -> Target -> [a]
