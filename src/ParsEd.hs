@@ -11,11 +11,12 @@ data Operator = Quit | Print | Change | Delete | Mark | Goto
 data Keyword = Comma
              deriving (Show, Eq)
 
-data Token = TokOp Operator
-           | TokIdent Char
-           | TokNum Int
-           | TokKey Keyword
-           deriving (Show, Eq)
+data Token =
+  TokOp Operator
+  | TokIdent Char
+  | TokNum Int
+  | TokKey Keyword
+  deriving (Show, Eq)
 
 data EditMode = Normal | Insert
               deriving Show
@@ -27,12 +28,16 @@ data State = State {
   -- mode :: EditMode
   } deriving Show
 
+data Location = Line Int
+              deriving (Read, Show, Eq)
+
 operator :: Char -> Operator
-operator c | c == 'q' = Quit
-           | c == 'p' = Print
-           | c == 'c' = Change
-           | c == 'd' = Delete
-           | c == 'k' = Mark
+operator c
+  | c == 'q' = Quit
+  | c == 'p' = Print
+  | c == 'c' = Change
+  | c == 'd' = Delete
+  | c == 'k' = Mark
 
 keyword :: Char -> Keyword
 keyword k  | k == ',' = Comma
@@ -49,9 +54,6 @@ tokenize (c : cs)
 number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
-
-data Location = Line Int
-              deriving (Read, Show, Eq)
 
 -- Ranges are always a tuple with a top and bottom pointer.
 -- for single selections, the top == bottom.
@@ -81,29 +83,29 @@ parseTarget (TokNum n : TokKey k : TokNum m : xs) _ = case k of
                                        Comma -> Left ((Line n, Line m), xs)
 parseTarget (TokNum n : xs) _ = Left (mkTarget (Line n), xs)
 parseTarget (TokIdent i: TokKey k : TokNum n: xs) st = case k of
-    Comma -> let i_res = (lookupReg i st) in
-               case i_res of
-                 Just loc -> Left (((fst loc), Line n), xs)
-                 Nothing -> Right "Invalid register"
+   Comma -> let i_res = (lookupReg i st) in
+     case i_res of
+       Just loc -> Left (((fst loc), Line n), xs)
+       Nothing -> Right "Invalid register"
 parseTarget (TokIdent i : xs) st = case (lookupReg i st) of
                                      Nothing -> Right "Invalid register"
                                      Just tgt -> Left (tgt, xs)
 
-
 -- Base case of no target = current line
-parseTarget xs ps = Left (mkTarget (Line (position ps)), xs)
+parseTarget xs st = Left (mkTarget (Line (position st)), xs)
 
 
 baseParser :: [Token] -> State -> Either Command String
-baseParser xs ps = case parseTarget xs ps of
-                     Left (tgt, tkns) -> case (cmdParser (tgt, tkns)) of
-                                         Left cmd -> Left cmd
-                                         Right err -> Right err
-                     Right err -> Right err
+baseParser xs st =
+  case parseTarget xs st of
+    Left (tgt, tkns) -> case (cmdParser (tgt, tkns)) of
+                          Left cmd -> Left cmd
+                          Right err -> Right err
+    Right err -> Right err
 
 -- TODO do we need to return State or is it readonly
 ee :: String -> State -> (Either Command String, State)
-ee s ps = (baseParser (tokenize s) ps, ps)
+ee s st = (baseParser (tokenize s) st, st)
 
 -- Register Table Bits
 updateReg key val table = Map.insert key val table
@@ -111,6 +113,6 @@ updateReg key val table = Map.insert key val table
 emptyRegTable = Map.empty
 
 lookupReg :: Char -> State -> Maybe Target
-lookupReg '.' ps = Just (mkTarget (Line (position ps)))
-lookupReg '$' ps = Just (mkTarget (Line ((length (buffer ps))-1)))
-lookupReg key ps = Map.lookup key (registers ps)
+lookupReg '.' st = Just (mkTarget (Line (position st)))
+lookupReg '$' st = Just (mkTarget (Line ((length (buffer st))-1)))
+lookupReg key st = Map.lookup key (registers st)
