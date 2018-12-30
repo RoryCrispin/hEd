@@ -5,11 +5,6 @@ import qualified Data.Map as Map
 
 type RegTable = Map.Map Char Target
 
-data ParserState = ParserState {
-  ps_position :: Int,
-  ps_registers :: RegTable
-  } deriving Show
-
 data Operator = Quit | Print | Change | Delete | Mark | Goto
               deriving (Show, Eq)
 
@@ -21,6 +16,16 @@ data Token = TokOp Operator
            | TokNum Int
            | TokKey Keyword
            deriving (Show, Eq)
+
+data EditMode = Normal | Insert
+              deriving Show
+
+data State = State {
+  buffer :: [String],
+  position :: Int,
+  registers :: RegTable
+  -- mode :: EditMode
+  } deriving Show
 
 operator :: Char -> Operator
 operator c | c == 'q' = Quit
@@ -71,27 +76,33 @@ cmdParser x = Right ("Invalid command" ++ (show  (fst x)))
 
 
 -- Parses range from input tokens and returns unconsumed tokens
-parseTarget :: [Token] -> ParserState -> Either (Target, [Token]) String
+parseTarget :: [Token] -> State -> Either (Target, [Token]) String
 parseTarget (TokNum n : TokKey k : TokNum m : xs) _ = case k of
                                        Comma -> Left ((Line n, Line m), xs)
 parseTarget (TokNum n : xs) _ = Left (mkTarget (Line n), xs)
-
-parseTarget (TokIdent i : xs) ps = case lookupReg i ps of
+parseTarget (TokIdent i: TokKey k : TokNum n: xs) st = case k of
+    Comma -> let i_res = (lookupReg i st) in
+               case i_res of
+                 Just loc -> Left (((fst loc), Line n), xs)
+                 Nothing -> Right "Invalid register"
+parseTarget (TokIdent i : xs) st = case (lookupReg i st) of
                                      Nothing -> Right "Invalid register"
                                      Just tgt -> Left (tgt, xs)
+
+
 -- Base case of no target = current line
-parseTarget xs ps = Left (mkTarget (Line (ps_position ps)), xs)
+parseTarget xs ps = Left (mkTarget (Line (position ps)), xs)
 
 
-baseParser :: [Token] -> ParserState -> Either Command String
+baseParser :: [Token] -> State -> Either Command String
 baseParser xs ps = case parseTarget xs ps of
                      Left (tgt, tkns) -> case (cmdParser (tgt, tkns)) of
                                          Left cmd -> Left cmd
                                          Right err -> Right err
                      Right err -> Right err
 
--- TODO do we need to return ParserState or is it readonly
-ee :: String -> ParserState -> (Either Command String, ParserState)
+-- TODO do we need to return State or is it readonly
+ee :: String -> State -> (Either Command String, State)
 ee s ps = (baseParser (tokenize s) ps, ps)
 
 -- Register Table Bits
@@ -99,6 +110,7 @@ updateReg key val table = Map.insert key val table
 
 emptyRegTable = Map.empty
 
-lookupReg :: Char -> ParserState -> Maybe Target
-lookupReg '.' ps = Just (mkTarget ( Line (ps_position ps)))
-lookupReg key ps = Map.lookup key (ps_registers ps)
+lookupReg :: Char -> State -> Maybe Target
+lookupReg '.' ps = Just (mkTarget (Line (position ps)))
+lookupReg '$' ps = Just (mkTarget (Line ((length (buffer ps))-1)))
+lookupReg key ps = Map.lookup key (registers ps)
