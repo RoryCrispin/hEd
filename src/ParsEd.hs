@@ -1,9 +1,8 @@
 module ParsEd where
 
 import Data.Char
-import qualified Data.Map as Map
+import State
 
-type RegTable = Map.Map Char Target
 
 data Operator = Quit
   | Print
@@ -24,19 +23,6 @@ data Token =
   | TokNum Int
   | TokKey Keyword
   deriving (Show, Eq)
-
-data HedMode = NormalMode | InsertMode
-              deriving Show
-
-data State = State {
-  buffer :: [String],
-  position :: Int,
-  registers :: RegTable,
-  mode :: HedMode
-  } deriving Show
-
-data Location = Line Int
-              deriving (Read, Show, Eq)
 
 operator :: Char -> Operator
 operator c
@@ -68,13 +54,7 @@ number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
 
--- Ranges are always a tuple with a top and bottom pointer.
--- for single selections, the top == bottom.
--- This should make things easier to reason about
-type Target = (Location, Location)
 
-mkTarget :: Location -> Target
-mkTarget x = (x, x)
 
 data Command = Command {
   target :: Target,
@@ -121,15 +101,4 @@ baseParser xs st =
 ee :: String -> State -> (Either Command String, State)
 ee s st = (baseParser (tokenize s) st, st)
 
--- Register Table Bits
-updateReg key val table = Map.insert key val table
 
-emptyRegTable = Map.empty
-
-currentPosition :: State -> Target
-currentPosition st = mkTarget (Line (position st))
-
-lookupReg :: Char -> State -> Maybe Target
-lookupReg '.' st = Just (currentPosition st)
-lookupReg '$' st = Just (mkTarget (Line ((length (buffer st))-1)))
-lookupReg key st = Map.lookup key (registers st)
