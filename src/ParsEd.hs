@@ -5,8 +5,15 @@ import qualified Data.Map as Map
 
 type RegTable = Map.Map Char Target
 
-data Operator = Quit | Print | Change | Delete | Mark | Goto
-              deriving (Show, Eq)
+data Operator = Quit
+  | Print
+  | Change
+  | Delete
+  | Mark
+  | Goto
+  | After
+  | Insert
+  deriving (Show, Eq)
 
 data Keyword = Comma
              deriving (Show, Eq)
@@ -18,14 +25,14 @@ data Token =
   | TokKey Keyword
   deriving (Show, Eq)
 
-data EditMode = Normal | Insert
+data HedMode = NormalMode | InsertMode
               deriving Show
 
 data State = State {
   buffer :: [String],
   position :: Int,
-  registers :: RegTable
-  -- mode :: EditMode
+  registers :: RegTable,
+  mode :: HedMode
   } deriving Show
 
 data Location = Line Int
@@ -36,6 +43,8 @@ operator c
   | c == 'q' = Quit
   | c == 'p' = Print
   | c == 'c' = Change
+  | c == 'a' = After
+  | c == 'i' = Insert
   | c == 'd' = Delete
   | c == 'k' = Mark
 
@@ -45,11 +54,15 @@ keyword k  | k == ',' = Comma
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize (c : cs)
-  | elem c "qpcdk" = TokOp (operator c) : tokenize cs
+  | elem c "qpcdkai" = TokOp (operator c) : tokenize cs
   | elem c "," = TokKey (keyword c) : tokenize cs
   | isDigit c = number c cs
   | isSpace c = tokenize cs
   | otherwise = (TokIdent c : tokenize cs)
+
+tokenizeInsertMode :: String -> Maybe String
+tokenizeInsertMode ('.' : xs) = Nothing
+tokenizeInsertMode xs = Just xs
 
 number c cs =
   let (digs, cs') = span isDigit cs in
@@ -74,7 +87,7 @@ cmdParser (r, (TokOp o : xs)) = Left $ Command r o xs
 cmdParser (r, []) = Left $ Command r Goto []
 
               -- TODO some debugging prints here to remove
-cmdParser x = Right ("Invalid command" ++ (show  (fst x)))
+cmdParser x = Right ("Invalid command" ++ (show  (fst x)) ++ (show (snd x)))
 
 
 -- Parses range from input tokens and returns unconsumed tokens
@@ -87,9 +100,10 @@ parseTarget (TokIdent i: TokKey k : TokNum n: xs) st = case k of
      case i_res of
        Just loc -> Left (((fst loc), Line n), xs)
        Nothing -> Right "Invalid register"
+-- parseTarget (TokIdent i : []) st = Left ((currentPosition st), [TokIdent i])
 parseTarget (TokIdent i : xs) st = case (lookupReg i st) of
-                                     Nothing -> Right "Invalid register"
                                      Just tgt -> Left (tgt, xs)
+                                     Nothing -> Right "Invalid register"
 
 -- Base case of no target = current line
 parseTarget xs st = Left (mkTarget (Line (position st)), xs)
@@ -112,7 +126,10 @@ updateReg key val table = Map.insert key val table
 
 emptyRegTable = Map.empty
 
+currentPosition :: State -> Target
+currentPosition st = mkTarget (Line (position st))
+
 lookupReg :: Char -> State -> Maybe Target
-lookupReg '.' st = Just (mkTarget (Line (position st)))
+lookupReg '.' st = Just (currentPosition st)
 lookupReg '$' st = Just (mkTarget (Line ((length (buffer st))-1)))
 lookupReg key st = Map.lookup key (registers st)
