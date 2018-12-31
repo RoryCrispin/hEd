@@ -51,3 +51,22 @@ insertLine str st = let newBuffer =
 
 insertAt pos new_element list =
   let (ys,zs) = splitAt pos list in ys ++ [new_element] ++ zs
+
+getTarget :: [a] -> Target -> [a]
+getTarget xs (topLoc, bottomLoc) =
+  let top = locationToLine topLoc in
+    let bottom = locationToLine bottomLoc in
+      if top == bottom then
+        [xs !! top]
+      else
+        take (bottom-top+1) $ drop top xs
+
+locationToLine :: Location -> Int
+locationToLine (Line x) = x
+
+
+deleteTarget :: [a] -> Target  -> [a]
+deleteTarget xs (topLoc, bottomLoc) =
+  let top = locationToLine topLoc in
+    let bottom = locationToLine bottomLoc in
+      take top xs ++ drop ( bottom+1 ) xs

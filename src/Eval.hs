@@ -62,23 +62,3 @@ evaluate Command {op=Insert} st =
 
 evaluate Command {op=Quit} st = error "TODO quit gracefully"
 
-getTarget :: [a] -> Target -> [a]
-getTarget xs (topLoc, bottomLoc) =
-  let top = locationToLine topLoc in
-    let bottom = locationToLine bottomLoc in
-      if top == bottom then
-        [xs !! top]
-      else
-        take (bottom-top+1) $ drop top xs
-
-locationToLine :: Location -> Int
-locationToLine (Line x) = x
-
-identToStr (TokIdent n) = n
-
-deleteTarget :: [a] -> Target  -> [a]
-deleteTarget xs (topLoc, bottomLoc) =
-  let top = locationToLine topLoc in
-    let bottom = locationToLine bottomLoc in
-      take top xs ++ drop ( bottom+1 ) xs
-

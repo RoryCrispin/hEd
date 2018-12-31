@@ -102,3 +102,5 @@ ee :: String -> State -> (Either Command String, State)
 ee s st = (baseParser (tokenize s) st, st)
 
 
+
+identToStr (TokIdent n) = n
