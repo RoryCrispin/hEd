@@ -1,4 +1,3 @@
-
 module Lib where
 
 import System.IO
@@ -8,7 +7,7 @@ import Eval
 
 bob :: IO()
 bob = do
-    handle <- openFile "file.txt" ReadMode
+    handle <- openFile "shakespeare.txt" ReadMode
     contents <- hGetContents handle
     let ln = lines contents
     printLoop (State ln 0 (emptyRegTable) NormalMode)

@@ -5,9 +5,18 @@ import ParsEd
 
 -- TODO is this dead code? Does the parser need to update the state or just see it?
 -- Updates a State with new values from the ParserState result
+apn = ("n " ++)
+
+alle :: [String] -> Int -> [String]
+alle [] _ = []
+alle (x:xs) n = (show n ++ " " ++ x) : alle xs (n + 1)
+
 evaluate :: Command -> State -> (State, String)
 evaluate Command {op=Print, target=t} st =
   (st, (unlines (getTarget (buffer st) t)))
+
+evaluate Command {op=Number, target=t} st =
+  (st, (unlines (getTarget (alle (buffer st) 0) t)))
 
 evaluate Command {op=Delete, target=t} st =
   (State {

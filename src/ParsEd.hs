@@ -5,13 +5,14 @@ import State
 
 
 data Operator = Quit
-  | Print
+  | After
   | Change
   | Delete
-  | Mark
   | Goto
-  | After
   | Insert
+  | Mark
+  | Number
+  | Print
   deriving (Show, Eq)
 
 data Keyword = Comma
@@ -26,13 +27,14 @@ data Token =
 
 operator :: Char -> Operator
 operator c
-  | c == 'q' = Quit
-  | c == 'p' = Print
-  | c == 'c' = Change
   | c == 'a' = After
-  | c == 'i' = Insert
+  | c == 'c' = Change
   | c == 'd' = Delete
+  | c == 'i' = Insert
   | c == 'k' = Mark
+  | c == 'n' = Number
+  | c == 'p' = Print
+  | c == 'q' = Quit
 
 keyword :: Char -> Keyword
 keyword k  | k == ',' = Comma
@@ -40,7 +42,7 @@ keyword k  | k == ',' = Comma
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize (c : cs)
-  | elem c "qpcdkai" = TokOp (operator c) : tokenize cs
+  | elem c "qpcdkain" = TokOp (operator c) : tokenize cs
   | elem c "," = TokKey (keyword c) : tokenize cs
   | isDigit c = number c cs
   | isSpace c = tokenize cs
@@ -53,8 +55,6 @@ tokenizeInsertMode xs = Just xs
 number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
-
-
 
 data Command = Command {
   target :: Target,
