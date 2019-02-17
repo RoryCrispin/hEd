@@ -1,4 +1,52 @@
-## hEd is an implementation of GNU ed in Haskell
+* hEd - An implementation of GNU Ed in Haskell for fun
+
+** Spec
+
+A non-exhaustive list of Ed's features which I would like to implement here. 
+
+| Command     | Feature                     | Support | Notes                     |                                                       |
+|-------------+-----------------------------+---------+---------------------------+-------------------------------------------------------|
+|             | Loading in file as argument | F       |                           |                                                       |
+| w           | Saving file                 | F       |                           | Write the buffer to file                              |
+| \!          | Running shell commands      | F       |                           |                                                       |
+| r           | Read command                | F       |                           | Read a file or shell input                            |
+| (.)a        | Append text                 | T       |                           | Append text after addressed line                      |
+| \#          | Comments                    | F       |                           | Noop                                                  |
+| p           | Print command               | T       |                           | Print lines                                           |
+| n           | Number command              | T       |                           | Print line prefixed with linum                        |
+| g\/string\/ | Search                      | F       |                           | Print all lines containign string                     |
+| s\/re\/     | Regex search                | F       |                           | Print all lines matching re                           |
+| (,.,)c      | Change                      | T       | Default not set correctly | Chenge the text of the addressed range                |
+| (,.,)d      | Delete                      | T       | Default not set correctly | Delete addressed lines                                |
+| (.)i        | Insert                      | T       |                           | Insert text before addressed line                     |
+| (.,.+1)j    | Join                        | F       |                           | Join the addressed lines together                     |
+| (.)kx       | Mark                        | T       |                           | Mark the addressed line for subsequent comamnds       |
+| (.,.)m(.)   | Move                        | F       |                           | Move the addressed lines to the right hand target     |
+| q           | Quit                        | T       |                           | Quit ed, a warning will be printed of unsaved changes |
+| Q           | Quit unconditionally        | F       |                           | Quit ed without warning                               |
+|             |                             |         |                           |                                                       |
+
+
+* Line addressing
+| Command | Address                                                           | Support |
+|---------+-------------------------------------------------------------------+---------|
+| .       | Current line                                                      | T       |
+| \$      | Last line in buffer                                               | F       |
+| n       | /n/th number                                                      | T       |
+| +n      | nth next line where n is a non negative number                    | F       |
+| -n      | ""                                                                | F       |
+| +       | The next line (equivelant to +1                                   | F       |
+| -       | ""                                                                | F       |
+| ,       | The first through last lines in buffer                            | F       |
+| ;       | The current through last lines in buffer                          | F       |
+| \/re\/  | The next line containing the regular expression /re/              | F       |
+| ?re?    | The previous line containing re                                   | F       |
+| 'x      | The line previously marked by a k command, where x is the address |         |
+|         |                                                                   |         |
+
+
+* Ed manual
+
 
 ed(1) - Linux man page
 
