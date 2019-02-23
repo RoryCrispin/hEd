@@ -1,6 +1,9 @@
 module Main where
 
 import Lib
+import System.Environment
 
 main :: IO ()
-main = bob
+main = do
+  args <- getArgs
+  bob args

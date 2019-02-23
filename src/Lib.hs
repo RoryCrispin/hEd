@@ -5,9 +5,9 @@ import ParsEd
 import State
 import Eval
 
-bob :: IO()
-bob = do
-    handle <- openFile "shakespeare.txt" ReadMode
+bob :: [String] -> IO()
+bob args = do
+    handle <- openFile (head args) ReadMode
     contents <- hGetContents handle
     let ln = lines contents
     printLoop (State ln 0 (emptyRegTable) NormalMode)
