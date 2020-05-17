@@ -14,11 +14,11 @@ data State = State {
   mode :: HedMode
   } deriving Show
 
-data Location = Line Int
-              deriving (Read, Show, Eq)
+newtype Location = Line Int
+                     deriving (Read, Show, Eq)
 
 -- Ranges are always a tuple with a top and bottom pointer.
--- for single selections, the top == bottom.
+-- for single line selections, the top == bottom.
 -- This should make things easier to reason about
 type Target = (Location, Location)
 
@@ -35,7 +35,7 @@ currentPosition st = mkTarget (Line (position st))
 
 lookupReg :: Char -> State -> Maybe Target
 lookupReg '.' st = Just (currentPosition st)
-lookupReg '$' st = Just (mkTarget (Line ((length (buffer st))-1)))
+lookupReg '$' st = Just (mkTarget (Line (length (buffer st) - 1)))
 lookupReg key st = Map.lookup key (registers st)
 
 -- Buffer manipulation
@@ -44,7 +44,7 @@ insertLine str st = let newBuffer =
                           insertAt (position st) str (buffer st) in
                       State {
   buffer=newBuffer
-  , position=(position st) +1
+  , position=position st + 1
   , registers=registers st
   , mode=mode st
   }

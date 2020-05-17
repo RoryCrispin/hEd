@@ -13,18 +13,14 @@ alle (x:xs) n = (show n ++ " " ++ x) : alle xs (n + 1)
 
 evaluate :: Command -> State -> (State, String)
 evaluate Command {op=Print, target=t} st =
-  (st, (unlines (getTarget (buffer st) t)))
+  (st, unlines (getTarget (buffer st) t))
 
 evaluate Command {op=Number, target=t} st =
-  (st, (unlines (getTarget (alle (buffer st) 0) t)))
+  (st, unlines (getTarget (alle (buffer st) 0) t))
 
 evaluate Command {op=Delete, target=t} st =
-  (State {
-      buffer=(deleteTarget (buffer st) t)
-      , position=position st
-      , registers=registers st
-      , mode=mode st
-   }
+  (State{buffer = deleteTarget (buffer st) t, position = position st,
+         registers = registers st, mode = mode st}
   , "OK")
 
 evaluate Command {op=Mark, target=t, params=p}
@@ -54,20 +50,16 @@ evaluate Command {op=Goto, target=tgt}
 evaluate Command {op=After} st =
   (State {
       buffer=buffer st
-      , position=(position st) +1
+      , position=position st + 1
       , registers=registers st
       , mode=InsertMode
       },
     ">") -- TODO remove this str
 
 evaluate Command {op=Insert} st =
-  (State {
-      buffer=buffer st
-      , position=(position st)
-      , registers=registers st
-      , mode=InsertMode
-      },
+  (State{buffer = buffer st, position = position st,
+         registers = registers st, mode = InsertMode},
     ">") -- TODO remove this str
 
-evaluate Command {op=Quit} st = error "TODO quit gracefully"
+evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
 
