@@ -13,6 +13,8 @@ bob args = do
     printLoop (State ln 0 emptyRegTable NormalMode)
     hClose handle
 
+emptyState = (State [] 0 emptyRegTable NormalMode)
+
 printLoop :: State -> IO ()
 printLoop st = do
     input <- getLine

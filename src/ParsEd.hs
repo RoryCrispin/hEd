@@ -18,6 +18,9 @@ data Operator = QuitUnconditionally
 data Keyword = Comma
              deriving (Show, Eq)
 
+
+-- I think TokOp and TokIdent is wrong - it should just be TokAlpha and we can determine
+-- what it is in the syntax
 data Token =
   TokOp Operator
   | TokIdent Char
@@ -42,7 +45,7 @@ keyword k  | k == ',' = Comma
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize (c : cs)
-  | c `elem` "qpcdkain" = TokOp (operator c) : tokenize cs
+  | c `elem` "Qpcdkain" = TokOp (operator c) : tokenize cs
   | c `elem` "," = TokKey (keyword c) : tokenize cs
   | isDigit c = number c cs
   | isSpace c = tokenize cs
@@ -69,21 +72,31 @@ cmdParser (r, []) = Left $ Command r Goto []
               -- TODO some debugging prints here to remove
 cmdParser x = Right ("Invalid command" ++ show (fst x) ++ show (snd x))
 
+parseTokenLoc :: Token -> State -> Maybe Location
+parseTokenLoc (TokNum n) _ = Just (Line n)
+parseTokenLoc (TokIdent i) st = lookupReg i st
 
+
+-- Each side of the comma should be parsed infividually into an int.
+-- shouldn't have to write it each side
 -- Parses range from input tokens and returns unconsumed tokens
 parseTarget :: [Token] -> State -> Either (Target, [Token]) String
-parseTarget (TokNum n : TokKey k : TokNum m : xs) _ = case k of
-                                       Comma -> Left ((Line n, Line m), xs)
-parseTarget (TokNum n : xs) _ = Left (mkTarget (Line n), xs)
-parseTarget (TokIdent i: TokKey k : TokNum n: xs) st = case k of
-   Comma -> let i_res = lookupReg i st in
-              case i_res of
-                  Just loc -> Left ((fst loc, Line n), xs)
-                  Nothing -> Right "Invalid register"
--- parseTarget (TokIdent i : []) st = Left ((currentPosition st), [TokIdent i])
-parseTarget (TokIdent i : xs) st = case lookupReg i st of
-                                       Just tgt -> Left (tgt, xs)
-                                       Nothing -> Right "Invalid register"
+
+-- A single comma represnts the whole buffer
+parseTarget (TokKey Comma : TokOp x : xs) st = Left (fullBufferTarget st, TokOp x : xs)
+
+parseTarget (a:TokKey Comma:b:xs) st =
+  case parseTokenLoc a st of
+    Just loc_a ->
+      case parseTokenLoc b st of
+        Just loc_b -> Left ((loc_a, loc_b), xs)
+        Nothing -> Right "Invalid right hand target"
+    Nothing -> Right "Invalid left hand target"
+
+parseTarget (a:TokOp op:xs) st =
+  case parseTokenLoc a st of
+    Just loc -> Left (mkTarget loc, TokOp op : xs)
+    Nothing -> Right "Invalid target"
 
 -- Base case of no target = current line
 parseTarget xs st = Left (mkTarget (Line (position st)), xs)

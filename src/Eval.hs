@@ -11,12 +11,18 @@ alle :: [String] -> Int -> [String]
 alle [] _ = []
 alle (x:xs) n = (show n ++ " " ++ x) : alle xs (n + 1)
 
+-- Dont really want to have to repeat this application for every function
+-- this should be an applicative, I think
 evaluate :: Command -> State -> (State, String)
-evaluate Command {op=Print, target=t} st =
-  (st, unlines (getTarget (buffer st) t))
+evaluate Command {op = Print, target = t} st =
+  case getTarget (buffer st) t of
+    Nothing -> (st, "Invalid target")
+    Just tgt -> (st, unlines tgt)
 
 evaluate Command {op=Number, target=t} st =
-  (st, unlines (getTarget (alle (buffer st) 0) t))
+  case getTarget (alle (buffer st) 0) t of
+    Nothing -> (st, "Invalid target")
+    Just tgt -> (st, unlines tgt)
 
 evaluate Command {op=Delete, target=t} st =
   (State{buffer = deleteTarget (buffer st) t, position = position st,
@@ -25,7 +31,7 @@ evaluate Command {op=Delete, target=t} st =
 
 evaluate Command {op=Mark, target=t, params=p}
   State {buffer=b, position=pos, registers=r} =
-  let newRegisters = updateReg (identToStr (head p)) t r in
+  let newRegisters = updateReg (identToStr (head p)) (snd t) r in
   ((State {
        buffer=b
        , position=pos
@@ -38,7 +44,15 @@ evaluate Command {op=Mark, target=t, params=p}
 evaluate Command {op=Goto, target=tgt}
   State {buffer=b, position=pos, registers=r} =
   let newPosition = fst tgt in
-    let targetLineContents = getTarget b (mkTarget newPosition) in
+    case getTarget b (mkTarget newPosition) of
+    Nothing -> ((State {
+                          buffer=b
+                          , position=pos
+                          , registers=r
+                          , mode=NormalMode
+                          }),
+                       "Invalid target") -- Error
+    Just targetLineContents ->
       ((State {
            buffer=b
            , position=locationToLine newPosition
@@ -46,6 +60,7 @@ evaluate Command {op=Goto, target=tgt}
            , mode=NormalMode
            }),
         head targetLineContents)
+
 
 evaluate Command {op=After} st =
   (State {
@@ -62,4 +77,5 @@ evaluate Command {op=Insert} st =
     ">") -- TODO remove this str
 
 evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
+
 
