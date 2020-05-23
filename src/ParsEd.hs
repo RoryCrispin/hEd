@@ -77,15 +77,12 @@ parseTokenLoc (TokNum n) _ = Just (Line n)
 parseTokenLoc (TokIdent i) st = lookupReg i st
 
 
--- Each side of the comma should be parsed infividually into an int.
--- shouldn't have to write it each side
--- Parses range from input tokens and returns unconsumed tokens
 parseTarget :: [Token] -> State -> Either (Target, [Token]) String
 
 -- A single comma represnts the whole buffer
 parseTarget (TokKey Comma : TokOp x : xs) st = Left (fullBufferTarget st, TokOp x : xs)
 
-parseTarget (a:TokKey Comma:b:xs) st =
+parseTarget (a : TokKey Comma : b : xs) st =
   case parseTokenLoc a st of
     Just loc_a ->
       case parseTokenLoc b st of
@@ -93,7 +90,7 @@ parseTarget (a:TokKey Comma:b:xs) st =
         Nothing -> Right "Invalid right hand target"
     Nothing -> Right "Invalid left hand target"
 
-parseTarget (a:TokOp op:xs) st =
+parseTarget (a : TokOp op : xs) st =
   case parseTokenLoc a st of
     Just loc -> Left (mkTarget loc, TokOp op : xs)
     Nothing -> Right "Invalid target"
