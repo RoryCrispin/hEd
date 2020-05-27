@@ -17,36 +17,36 @@ main = hspec $ do
       parseTarget [TokNum 10, TokKey Comma, TokNum 2] emptyState `shouldBe` Left ((Line 10, Line 2), [])
 
     it "Parses alpha and numeric tokens" $ do
-      parseTarget [TokNum 1, TokKey  Comma, TokIdent 'a'] emptyState `shouldBe` Right "Invalid right hand target"
-      parseTarget [TokIdent 'a', TokKey Comma, TokNum 1] emptyState `shouldBe` Right "Invalid left hand target"
+      parseTarget [TokNum 1, TokKey  Comma, TokChar 'a'] emptyState `shouldBe` Right "Invalid right hand target"
+      parseTarget [TokChar 'a', TokKey Comma, TokNum 1] emptyState `shouldBe` Right "Invalid left hand target"
 
     it "Parses single numgers" $ do
-      parseTarget [TokNum 1, TokOp Print] emptyState `shouldBe` Left ((Line 1, Line 1), [TokOp Print])
-      parseTarget [TokIdent 'a', TokOp Print] emptyState `shouldBe` Right "Invalid target"
+      parseTarget [TokNum 1, TokChar 'p'] emptyState `shouldBe` Left ((Line 1, Line 1), [TokChar 'p'])
+      parseTarget [TokChar 'a', TokChar 'p'] emptyState `shouldBe` Right "Invalid target"
 
     it "Parses the dollar as last line" $
-      parseTarget [TokIdent '$'] dummyState `shouldBe` Left ((Line 3, Line 3), [])
-    it "Parses the comma as first through last lines" $
-      parseTarget [TokIdent ','] dummyState `shouldBe` Left ((Line 0, Line 3), [])
+      parseTarget [TokChar '$'] dummyState `shouldBe` Left ((Line 3, Line 3), [])
+    xit "Parses the comma as first through last lines" $
+      parseTarget [TokChar ','] dummyState `shouldBe` Left ((Line 0, Line 3), [])
 
   describe "Parse with reg table" $
     it "" $ do
-      parseTarget [TokNum 2, TokKey  Comma, TokIdent 'a'] dummyState `shouldBe` Left ((Line 2, Line 1), [])
-      parseTarget [TokIdent 'a', TokKey  Comma, TokNum 2] dummyState `shouldBe` Left ((Line 1, Line 2), [])
-      parseTarget [TokIdent 'a', TokKey  Comma, TokIdent 'b'] dummyState `shouldBe` Left ((Line 1, Line 2), [])
+      parseTarget [TokNum 2, TokKey  Comma, TokChar 'a'] dummyState `shouldBe` Left ((Line 2, Line 1), [])
+      parseTarget [TokChar 'a', TokKey  Comma, TokNum 2] dummyState `shouldBe` Left ((Line 1, Line 2), [])
+      parseTarget [TokChar 'a', TokKey  Comma, TokChar 'b'] dummyState `shouldBe` Left ((Line 1, Line 2), [])
 
   describe "Print command" $ do
     it "Prints the target" $ do -- this is the mark command...
       ee "3kx" emptyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Mark [TokIdent 'x']))
+        (Left (Command (Line 3, Line 3) Mark [TokChar 'x']))
         , emptyState)
       ee "bp" dummyState `shouldBe` (
         (Left (Command (Line 2, Line 2) Print []))
         , dummyState)
 
-    xit "Should accept registers with names conflicting with functions" $ do
+    it "Should accept registers with names conflicting with functions" $ do
       ee "3ka" emptyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Mark [TokIdent 'a']))
+        (Left (Command (Line 3, Line 3) Mark [TokChar 'a']))
         , emptyState)
 
   describe "Test evaluation" $ do
