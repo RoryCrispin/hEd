@@ -5,14 +5,14 @@ import Control.Lens
 
 
 data HedMode = NormalMode | InsertMode
-              deriving Show
+              deriving (Show, Eq)
 
 data State = State {
   buffer :: [String],
   position :: Int,
   registers :: RegTable,
   mode :: HedMode
-  } deriving Show
+  } deriving (Show, Eq)
 
 newtype Location = Line Int
                      deriving (Read, Show, Eq)

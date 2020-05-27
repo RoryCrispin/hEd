@@ -72,6 +72,8 @@ cmdParser (r, []) = Left $ Command r Goto []
               -- TODO some debugging prints here to remove
 cmdParser x = Right ("Invalid command" ++ show (fst x) ++ show (snd x))
 
+-- TODO RC next: a parseTokenLoc may return a full location..
+-- see failing test for the , case where , represents first through last lines of the document
 parseTokenLoc :: Token -> State -> Maybe Location
 parseTokenLoc (TokNum n) _ = Just (Line n)
 parseTokenLoc (TokIdent i) st = lookupReg i st
@@ -96,6 +98,9 @@ parseTarget (a : TokOp op : xs) st =
     Nothing -> Right "Invalid target"
 
 -- Base case of no target = current line
+parseTarget (TokIdent i : xs) st = case parseTokenLoc (TokIdent i) st of
+                                     Just loc -> Left ((mkTarget loc), xs)
+                                     Nothing -> Right "Invalid target"
 parseTarget xs st = Left (mkTarget (Line (position st)), xs)
 
 
