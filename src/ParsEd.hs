@@ -16,11 +16,14 @@ data Operator = QuitUnconditionally
   deriving (Show, Eq)
 
 data Keyword = Comma
+  | Semicolon
              deriving (Show, Eq)
 
 data Token = TokNum Int
+  | TokReg Char
   | TokKey Keyword
   | TokChar Char
+  | TokOffset Int
   deriving (Show, Eq)
 
 operator :: Char -> Maybe Operator
@@ -41,8 +44,12 @@ keyword k  | k == ',' = Just Comma
 
 tokenize :: String -> [Token]
 tokenize [] = []
+tokenize  ('+' : c : cs) = if isDigit c then numberOffset c cs else TokOffset 1 : tokenize  (c : cs)
+tokenize  ('-' : c : cs) = if isDigit c then numberOffset '-' (c : cs) else TokOffset (-1) : tokenize  (c : cs)
+tokenize ('\'' : c : cs) = TokReg c : tokenize cs
 tokenize (c : cs)
   | c `elem` "," = TokKey Comma : tokenize cs
+  | c `elem` ";" = TokKey Semicolon : tokenize cs
   | isDigit c = number c cs
   | isSpace c = tokenize cs
   | otherwise = TokChar c : tokenize cs
@@ -51,10 +58,19 @@ tokenizeInsertMode :: String -> Maybe String
 tokenizeInsertMode ('.' : _) = Nothing
 tokenizeInsertMode xs = Just xs
 
+
+-- There is a pattern here.. Go and revise the solution
 number :: Char -> String -> [Token]
 number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
+
+numberOffset :: Char -> String -> [Token] -- I'm working on moving from TokPlus TokMinus to TokOffset.. this dunction needs to somehow eeturn minus or plus offsets depengind on the input
+numberOffset c cs =
+  let (digs, cs') = span isDigit cs in
+    TokOffset (read (c : digs)) : tokenize cs'
+-- End pattern
+
 
 data Command = Command {
   target :: Target,
@@ -74,7 +90,10 @@ cmdParser x = Right ("Invalid command" ++ show (fst x) ++ show (snd x))
 -- TODO RC next: a parseTokenLoc may return a full location..
 -- see failing test for the , case where , represents first through last lines of the document
 parseTokenLoc :: Token -> State -> Maybe Location
+-- parseTokenLoc (TokPlus)
+parseTokenLoc (TokOffset n) st = Just (Line (position st + n))
 parseTokenLoc (TokNum n) _ = Just (Line n)
+parseTokenLoc (TokReg r) st = lookupReg r st
 parseTokenLoc (TokChar i) st = lookupReg i st
 parseTokenLoc _ _ = Nothing
 
@@ -83,6 +102,7 @@ parseTarget :: [Token] -> State -> Either (Target, [Token]) String
 
 -- A single comma represnts the whole buffer
 parseTarget (TokKey Comma : xs) st = Left (fullBufferTarget st, xs)
+parseTarget (TokKey Semicolon : xs) st = Left (currentThroughLastTarget st, xs)
 
 parseTarget (a : TokKey Comma : b : xs) st =
   case parseTokenLoc a st of

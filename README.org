@@ -30,17 +30,17 @@ A non-exhaustive list of Ed's features which I would like to implement here.
 | Command | Address                                                           | Support |
 |---------+-------------------------------------------------------------------+---------|
 | .       | Current line                                                      | ✅      |
-| \$      | Last line in buffer                                               | ❌      |
+| \$      | Last line in buffer                                               | ✅      |
 | n       | /n/th number                                                      | ✅      |
-| +n      | nth next line where n is a non negative number                    | ❌      |
-| -n      | ""                                                                | ❌      |
-| +       | The next line (equivelant to +1                                   | ❌      |
-| -       | ""                                                                | ❌      |
-| ,       | The first through last lines in buffer                            | ❌      |
-| ;       | The current through last lines in buffer                          | ❌      |
+| +n      | nth next line where n is a non negative number                    | ✅      |
+| -n      | ""                                                                | ✅      |
+| +       | The next line (equivelant to +1                                   | ✅      |
+| -       | ""                                                                | ✅      |
+| ,       | The first through last lines in buffer                            | ✅      |
+| ;       | The current through last lines in buffer                          | ✅      |
 | \/re\/  | The next line containing the regular expression /re/              | ❌      |
 | ?re?    | The previous line containing re                                   | ❌      |
-| 'x      | The line previously marked by a k command, where x is the address | ❌      |
+| 'x      | The line previously marked by a k command, where x is the address | ✅      |
 
 
 

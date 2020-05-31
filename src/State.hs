@@ -3,6 +3,7 @@ module State where
 import qualified Data.Map as Map
 import Control.Lens
 
+dSt = State ["l1", "l2", "l3", "l4"] 0 (Map.fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode
 
 data HedMode = NormalMode | InsertMode
               deriving (Show, Eq)
@@ -28,7 +29,10 @@ mkTarget :: Location -> Target
 mkTarget x = (x, x)
 
 fullBufferTarget :: State -> Target
-fullBufferTarget s = (Line 0, Line (length (buffer s)))
+fullBufferTarget s = (Line 0, Line (length (buffer s) -1))
+
+currentThroughLastTarget :: State -> Target
+currentThroughLastTarget s = (Line (position s), Line (length (buffer s) -1))
 
 -- Register Table Bits
 updateReg key val table = Map.insert key val table

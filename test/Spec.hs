@@ -7,10 +7,20 @@ import Eval
 
 
 dummyState :: State
-dummyState = State ["l1", "l2", "l3", "l4"] 0 (fromList [('a', Line 1), ('b', Line 2)]) NormalMode
+dummyState = State ["l1", "l2", "l3", "l4"] 0 (fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode
 
 main :: IO ()
 main = hspec $ do
+  describe "Test tokenize" $ do
+    it "parses registers" $ do
+      tokenize "'ap3'c" `shouldBe` [TokReg 'a', TokChar 'p', TokNum 3, TokReg 'c']
+    it "Tokenizes offset targets" $ do
+      tokenize "+p" `shouldBe` [TokOffset 1, TokChar 'p']
+      tokenize "-p" `shouldBe` [TokOffset (-1), TokChar 'p']
+      tokenize "+1p" `shouldBe` [TokOffset 1, TokChar 'p']
+      tokenize "-1p" `shouldBe` [TokOffset (-1), TokChar 'p']
+      tokenize "+12345p" `shouldBe` [TokOffset 12345, TokChar 'p']
+      tokenize "-12345p" `shouldBe` [TokOffset (-12345), TokChar 'p']
   describe "Parse Target" $ do
     it "Parses numeric range" $ do
       parseTarget [TokNum 1, TokKey Comma, TokNum 2] emptyState `shouldBe` Left ((Line 1, Line 2), [])
@@ -43,11 +53,30 @@ main = hspec $ do
       ee "bp" dummyState `shouldBe` (
         (Left (Command (Line 2, Line 2) Print []))
         , dummyState)
+      ee "+3p" dummyState `shouldBe` (
+        (Left (Command (Line 3, Line 3) Print []))
+        , dummyState)
+      ee "-3p" dummyState `shouldBe` (
+        (Left (Command (Line (-3), Line (-3)) Print []))
+        , dummyState)
+      ee "$p" dummyState `shouldBe` (
+        (Left (Command (Line 3, Line 3) Print []))
+        , dummyState)
+      ee ",p" dummyState `shouldBe` (
+        (Left (Command (Line 0, Line 3) Print []))
+        , dummyState)
+      ee ";p" dummyState `shouldBe` (
+        (Left (Command (Line 0, Line 3) Print []))
+        , dummyState)
 
     it "Should accept registers with names conflicting with functions" $ do
       ee "3ka" emptyState `shouldBe` (
         (Left (Command (Line 3, Line 3) Mark [TokChar 'a']))
         , emptyState)
+    it "Should accept register notation in otherwise ambiguous commands" $ do
+      ee "'pp" dummyState `shouldBe` (
+        (Left (Command (Line 2, Line 2) Print []))
+        , dummyState)
 
   describe "Test evaluation" $ do
     it "prints" $ do
