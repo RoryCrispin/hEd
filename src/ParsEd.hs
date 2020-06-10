@@ -1,5 +1,5 @@
 module ParsEd where
-
+ -- TODO rc use either correctly. Right is for success
 import Data.Char
 import State
 
@@ -10,6 +10,7 @@ data Operator = QuitUnconditionally
   | Delete
   | Goto
   | Insert
+  | Join
   | Mark
   | Number
   | Print
@@ -32,6 +33,7 @@ operator c
   | c == 'c' = Just Change
   | c == 'd' = Just Delete
   | c == 'i' = Just Insert
+  | c == 'j' = Just Join
   | c == 'k' = Just Mark
   | c == 'n' = Just Number
   | c == 'p' = Just Print

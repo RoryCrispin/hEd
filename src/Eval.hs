@@ -62,20 +62,48 @@ evaluate Command {op=Goto, target=tgt}
         head targetLineContents)
 
 
-evaluate Command {op=After} st =
+evaluate Command {op=After, target=tgt} st =
   (State {
       buffer=buffer st
-      , position=position st + 1
+      , position=(locationToLine (fst tgt)) + 1
       , registers=registers st
       , mode=InsertMode
       },
     ">") -- TODO remove this str
 
-evaluate Command {op=Insert} st =
-  (State{buffer = buffer st, position = position st,
-         registers = registers st, mode = InsertMode},
-    ">") -- TODO remove this str
+evaluate Command {op=Insert, target=tgt} st =
+  (State {
+      buffer = buffer st
+      , position = locationToLine (fst tgt)
+      , registers = registers st
+      , mode = InsertMode}
+    , ">") -- TODO remove this str
+
+evaluate Command {op=Change, target=t} st =
+  (State {
+      buffer = deleteTarget (buffer st) t
+      , position = position st
+      , registers = registers st
+      , mode = InsertMode}
+  , ">")
+
+evaluate Command {op=Join, target=t} st =
+  (State {
+      buffer = joinLinesTarget t (buffer st)
+      , position = position st
+      , registers = registers st
+      , mode = NormalMode}
+  , "OK")
+
 
 evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
 
+
+-- fmap Location needed again..
+joinLinesTarget :: Target -> [String] -> [String]
+joinLinesTarget (start, end) = joinLines (locationToLine start, locationToLine end)
+
+
+joinLines :: (Int, Int) -> [String] -> [String]
+joinLines (start, end) lst = take start lst ++ [concat (drop start (take (end+1) lst))] ++ drop (end+1) lst
 

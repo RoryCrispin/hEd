@@ -78,6 +78,28 @@ main = hspec $ do
         (Left (Command (Line 2, Line 2) Print []))
         , dummyState)
 
+  describe "After command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 3,Line 3), op = After, params = []}) dummyState `shouldBe` (
+        State {buffer = ["l1","l2","l3","l4"], position = 4, registers = registers dummyState, mode = InsertMode},">")
+  describe "Insert command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 3,Line 3), op = Insert, params = []}) dummyState `shouldBe` (
+        State {buffer = ["l1","l2","l3","l4"], position = 3, registers = registers dummyState, mode = InsertMode},">")
+  describe "Change command" $ do
+    it "evaluates" $ do
+      -- TODO how does deleting/changing a range move the current target?
+      evaluate (Command {target = (Line 3,Line 3), op = Change, params = []}) dummyState `shouldBe` (
+        State {buffer = ["l1","l2","l3"], position = position dummyState, registers = registers dummyState, mode = InsertMode},">")
+  describe "Delete command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 3,Line 3), op = Delete, params = []}) dummyState `shouldBe` (
+        State {buffer = ["l1","l2","l3"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
+  describe "Join command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 0,Line 1), op = Join, params = []}) dummyState `shouldBe` (
+        State {buffer = ["l1l2","l3","l4"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
+
   describe "Test evaluation" $ do
     it "prints" $ do
       evaluate (Command (Line 3, Line 3) Print []) dummyState `shouldBe` (dummyState, "l4\n")
