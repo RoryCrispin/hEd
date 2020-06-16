@@ -15,6 +15,7 @@ data Operator = QuitUnconditionally
   | Move
   | Number
   | Print
+  | Transfer
   deriving (Show, Eq)
 
 data Keyword = Comma
@@ -39,6 +40,7 @@ operator c
   | c == 'm' = Just Move
   | c == 'n' = Just Number
   | c == 'p' = Just Print
+  | c == 't' = Just Transfer
   | c == 'Q' = Just QuitUnconditionally
   | otherwise = Nothing
 

@@ -21,6 +21,8 @@ main = hspec $ do
       tokenize "-1p" `shouldBe` [TokOffset (-1), TokChar 'p']
       tokenize "+12345p" `shouldBe` [TokOffset 12345, TokChar 'p']
       tokenize "-12345p" `shouldBe` [TokOffset (-12345), TokChar 'p']
+    it "Tokenizes move command" $ do
+      tokenize "1,2t4" `shouldBe` [TokNum 1, TokKey Comma, TokNum 2, TokChar 't', TokNum 4]
   describe "Parse Target" $ do
     it "Parses numeric range" $ do
       parseTarget [TokNum 1, TokKey Comma, TokNum 2] emptyState `shouldBe` Left ((Line 1, Line 2), [])
@@ -71,8 +73,14 @@ main = hspec $ do
       ee "1,2mj" dummyState `shouldBe` (
         (Left (Command (Line 1, Line 2) Move [TokChar 'j']))
         , dummyState)
+      ee "1,2tj" dummyState `shouldBe` (
+        (Left (Command (Line 1, Line 2) Transfer [TokChar 'j']))
+        , dummyState)
       ee "1,2m3" dummyState `shouldBe` (
         (Left (Command (Line 1, Line 2) Move [TokNum 3]))
+        , dummyState)
+      ee "1,2t3" dummyState `shouldBe` (
+        (Left (Command (Line 1, Line 2) Transfer [TokNum 3]))
         , dummyState)
 
     it "Should accept registers with names conflicting with functions" $ do
@@ -109,6 +117,10 @@ main = hspec $ do
     it "evaluates" $ do
       evaluate (Command {target = (Line 0,Line 1), op = Move, params = [TokNum 2]}) dummyState `shouldBe` (
         State {buffer = ["l3","l1","l2","l4"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
+  describe "Transfer command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 0,Line 1), op = Transfer, params = [TokNum 2]}) dummyState `shouldBe` (
+        State {buffer = ["l1","l2","l1","l2","l3","l4"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
 
   describe "Test evaluation" $ do
     it "prints" $ do

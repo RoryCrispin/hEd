@@ -109,20 +109,32 @@ evaluate Command {op=Move, target=t, params=p} st =
     Right e -> (st, e)
 -- Maybe the targets in these params should be parsed properly, or evaluate should return a Maybe
 
+evaluate Command {op=Transfer, target=t, params=p} st =
+  case parseTarget p st of
+    Left (dst, _) -> (State {
+            buffer = transferLinesTarget t (fst dst) (buffer st)
+            , position = position st
+            , registers = registers st
+            , mode = NormalMode}
+        , "OK")
+    Right e -> (st, e)
+
 
 evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
 
 
 -- fmap Location needed again..
 joinLinesTarget :: Target -> [String] -> [String]
-joinLinesTarget (start, end) = joinLines (locationToLine start, locationToLine end)
+joinLinesTarget tgt = joinLines (targetToLines tgt)
 
 
 joinLines :: (Int, Int) -> [[a]] -> [[a]]
 joinLines (start, end) lst = take start lst ++ [concat selection] ++ drop (end+1) lst
   where selection = onlyLines (start, end) lst
 
-moveLinesTarget (start, end) dst = moveLines (locationToLine start, locationToLine end) (locationToLine dst)
+moveLinesTarget tgt dst = moveLines (targetToLines tgt) (locationToLine dst)
+
+transferLinesTarget tgt dst = transferLines (targetToLines tgt) (locationToLine dst)
 
 moveLines :: (Int, Int) -> Int -> [a] -> Maybe [a]
 moveLines (start, end) pos buf
@@ -131,6 +143,11 @@ moveLines (start, end) pos buf
   | otherwise = Nothing
   where sansBuf = withoutLines (start, end) buf
         selection = onlyLines (start, end) buf
+
+
+transferLines :: (Int, Int) -> Int -> [a] -> [a]
+transferLines (start, end) pos buf = inject selection pos buf
+  where selection = onlyLines (start, end) buf
 
 withoutLines :: (Int, Int) -> [a] -> [a]
 withoutLines (start, end) lst = take start lst ++ drop (end+1) lst

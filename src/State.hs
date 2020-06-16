@@ -25,6 +25,7 @@ type RegTable = Map.Map Char Location
 -- This should make things easier to reason about
 type Target = (Location, Location)
 
+
 mkTarget :: Location -> Target
 mkTarget x = (x, x)
 
@@ -73,6 +74,8 @@ getTarget xs (topLoc, bottomLoc) =
 locationToLine :: Location -> Int
 locationToLine (Line x) = x
 
+targetToLines :: Target -> (Int, Int)
+targetToLines (Line a, Line b) = (a, b)
 
 deleteTarget :: [a] -> Target  -> [a]
 deleteTarget xs (topLoc, bottomLoc) =
