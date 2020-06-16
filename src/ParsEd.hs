@@ -12,6 +12,7 @@ data Operator = QuitUnconditionally
   | Insert
   | Join
   | Mark
+  | Move
   | Number
   | Print
   deriving (Show, Eq)
@@ -35,6 +36,7 @@ operator c
   | c == 'i' = Just Insert
   | c == 'j' = Just Join
   | c == 'k' = Just Mark
+  | c == 'm' = Just Move
   | c == 'n' = Just Number
   | c == 'p' = Just Print
   | c == 'Q' = Just QuitUnconditionally
@@ -67,7 +69,7 @@ number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
 
-numberOffset :: Char -> String -> [Token] -- I'm working on moving from TokPlus TokMinus to TokOffset.. this dunction needs to somehow eeturn minus or plus offsets depengind on the input
+numberOffset :: Char -> String -> [Token]
 numberOffset c cs =
   let (digs, cs') = span isDigit cs in
     TokOffset (read (c : digs)) : tokenize cs'

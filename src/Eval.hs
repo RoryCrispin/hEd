@@ -95,6 +95,20 @@ evaluate Command {op=Join, target=t} st =
       , mode = NormalMode}
   , "OK")
 
+evaluate Command {op=Move, target=t, params=p} st =
+  case parseTarget p st of
+    Left (dst, _) -> case moveLinesTarget t (fst dst) (buffer st) of
+      Just newBuf ->
+        (State {
+            buffer = newBuf
+            , position = position st
+            , registers = registers st
+            , mode = NormalMode}
+        , "OK")
+      Nothing -> (st, "Invalid destination")
+    Right e -> (st, e)
+-- Maybe the targets in these params should be parsed properly, or evaluate should return a Maybe
+
 
 evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
 
@@ -104,6 +118,27 @@ joinLinesTarget :: Target -> [String] -> [String]
 joinLinesTarget (start, end) = joinLines (locationToLine start, locationToLine end)
 
 
-joinLines :: (Int, Int) -> [String] -> [String]
-joinLines (start, end) lst = take start lst ++ [concat (drop start (take (end+1) lst))] ++ drop (end+1) lst
+joinLines :: (Int, Int) -> [[a]] -> [[a]]
+joinLines (start, end) lst = take start lst ++ [concat selection] ++ drop (end+1) lst
+  where selection = onlyLines (start, end) lst
+
+moveLinesTarget (start, end) dst = moveLines (locationToLine start, locationToLine end) (locationToLine dst)
+
+moveLines :: (Int, Int) -> Int -> [a] -> Maybe [a]
+moveLines (start, end) pos buf
+  | pos < start = Just $ inject selection pos sansBuf
+  | pos > end = Just $ inject selection (pos - (end-start)) sansBuf
+  | otherwise = Nothing
+  where sansBuf = withoutLines (start, end) buf
+        selection = onlyLines (start, end) buf
+
+withoutLines :: (Int, Int) -> [a] -> [a]
+withoutLines (start, end) lst = take start lst ++ drop (end+1) lst
+
+onlyLines :: (Int, Int) -> [a] -> [a]
+onlyLines (start, end) lst = (drop start (take (end+1) lst))
+
+inject :: [a] -> Int -> [a] -> [a]
+inject a pos lst = left ++ a ++ right
+  where (left, right) = splitAt pos lst
 

@@ -68,6 +68,12 @@ main = hspec $ do
       ee ";p" dummyState `shouldBe` (
         (Left (Command (Line 0, Line 3) Print []))
         , dummyState)
+      ee "1,2mj" dummyState `shouldBe` (
+        (Left (Command (Line 1, Line 2) Move [TokChar 'j']))
+        , dummyState)
+      ee "1,2m3" dummyState `shouldBe` (
+        (Left (Command (Line 1, Line 2) Move [TokNum 3]))
+        , dummyState)
 
     it "Should accept registers with names conflicting with functions" $ do
       ee "3ka" emptyState `shouldBe` (
@@ -99,6 +105,10 @@ main = hspec $ do
     it "evaluates" $ do
       evaluate (Command {target = (Line 0,Line 1), op = Join, params = []}) dummyState `shouldBe` (
         State {buffer = ["l1l2","l3","l4"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
+  describe "Move command" $ do
+    it "evaluates" $ do
+      evaluate (Command {target = (Line 0,Line 1), op = Move, params = [TokNum 2]}) dummyState `shouldBe` (
+        State {buffer = ["l3","l1","l2","l4"], position = position dummyState, registers = registers dummyState, mode = NormalMode},"OK")
 
   describe "Test evaluation" $ do
     it "prints" $ do
