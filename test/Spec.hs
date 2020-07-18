@@ -8,6 +8,8 @@ import Eval
 
 dummyState :: State
 dummyState = State ["l1", "l2", "l3", "l4"] 0 (fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode
+dummyState2 :: State
+dummyState2 = State ["One", "Two", "Three", "Four", "Five", "Six"] 2 (fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode
 
 main :: IO ()
 main = hspec $ do
@@ -130,4 +132,15 @@ main = hspec $ do
         \ I fix the offset" $ do
       evaluate (Command (Line 3, Line 3) Print []) dummyState `shouldBe` (dummyState, "l3\n")
 
+  describe "Test Regexp" $ do
+    it "parses regexp strings" $ do
+      tokenize "/some string/p" `shouldBe` [TokRegexp "some string", TokChar 'p']
+    it "finds the correct line" $ do
+      findRegexTarget "3" dummyState `shouldBe` Left (Line 2, Line 2)
+    it "searches forward from current line" $ do
+      findRegexTarget "r" dummyState2 `shouldBe` Left (Line 3, Line 3)
+    it "Looks forward" $ do
+      findRegexTarget "o" dummyState2 `shouldBe` Left (Line 3, Line 3)
+    it "Looks backwards" $ do
+      findRegexTarget "One" dummyState2 `shouldBe` Left (Line 0, Line 0)
 

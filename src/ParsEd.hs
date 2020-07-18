@@ -2,6 +2,8 @@ module ParsEd where
  -- TODO rc use either correctly. Right is for success
 import Data.Char
 import State
+import Data.List
+import Text.Regex.TDFA
 
 
 data Operator = QuitUnconditionally
@@ -27,6 +29,7 @@ data Token = TokNum Int
   | TokKey Keyword
   | TokChar Char
   | TokOffset Int
+  | TokRegexp String
   deriving (Show, Eq)
 
 operator :: Char -> Maybe Operator
@@ -50,6 +53,7 @@ keyword k  | k == ',' = Just Comma
 
 tokenize :: String -> [Token]
 tokenize [] = []
+tokenize  ('/': cs) = parseRegexp cs
 tokenize  ('+' : c : cs) = if isDigit c then numberOffset c cs else TokOffset 1 : tokenize  (c : cs)
 tokenize  ('-' : c : cs) = if isDigit c then numberOffset '-' (c : cs) else TokOffset (-1) : tokenize  (c : cs)
 tokenize ('\'' : c : cs) = TokReg c : tokenize cs
@@ -63,6 +67,12 @@ tokenize (c : cs)
 tokenizeInsertMode :: String -> Maybe String
 tokenizeInsertMode ('.' : _) = Nothing
 tokenizeInsertMode xs = Just xs
+
+parseRegexp :: String -> [Token]
+parseRegexp cs =
+  let (regexpStr, extras) = span regexpChar cs in
+    (TokRegexp regexpStr) : tokenize (tail extras)
+  where regexpChar = \x -> x /= '/' -- todo rc fix escaping regexes
 
 
 -- There is a pattern here.. Go and revise the solution
@@ -106,6 +116,9 @@ parseTokenLoc _ _ = Nothing
 
 parseTarget :: [Token] -> State -> Either (Target, [Token]) String
 
+parseTarget ((TokRegexp s): xs) st = case (findRegexTarget s st) of
+  Left tgt -> Left (tgt, xs)
+  Right err -> Right err
 -- A single comma represnts the whole buffer
 parseTarget (TokKey Comma : xs) st = Left (fullBufferTarget st, xs)
 parseTarget (TokKey Semicolon : xs) st = Left (currentThroughLastTarget st, xs)
@@ -122,6 +135,14 @@ parseTarget (a :  xs) st =
   case parseTokenLoc a st of
     Just loc -> Left (mkTarget loc, xs)
     Nothing -> Right "Invalid target"
+
+findRegexTarget :: String -> State -> Either Target String
+findRegexTarget re st = case findIndex (=~ re) fwd of
+  Just i -> Left $  mkTarget $ Line (i + (position st))
+  Nothing -> case findIndex (=~ re) back of
+    Just i -> Left $ mkTarget $ Line i
+    Nothing -> Right "Target not found" -- handle invalid regex?
+  where (back, fwd) = splitAt ((position st) + 1) (buffer st)
 
 -- Base case of no target = current line
 -- parseTarget (TokIdent i : xs) st = case parseTokenLoc (TokIdent i) st of
