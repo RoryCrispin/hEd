@@ -21,7 +21,7 @@ A non-exhaustive list of Ed's features which I would like to implement here.
 | (.)i        | Insert                      | ✅      |                           | Insert text before addressed line                     |
 | (.,.+1)j    | Join                        | ❌      |                           | Join the addressed lines together                     |
 | (.)kx       | Mark                        | ✅      |                           | Mark the addressed line for subsequent comamnds       |
-| (.,.)m(.)   | Move                        | ❌      |                           | Move the addressed lines to the right hand target     |
+| (.,.)m(.)   | Move                        | ✅      |                           | Move the addressed lines to the right hand target     |
 | q           | Quit                        | ❌      |                           | Quit ed, a warning will be printed of unsaved changes |
 | Q           | Quit unconditionally        | ✅      |                           | Quit ed without warning                               |
 
@@ -38,7 +38,7 @@ A non-exhaustive list of Ed's features which I would like to implement here.
 | -       | ""                                                                | ✅      |
 | ,       | The first through last lines in buffer                            | ✅      |
 | ;       | The current through last lines in buffer                          | ✅      |
-| \/re\/  | The next line containing the regular expression /re/              | ❌      |
+| \/re\/  | The next line containing the regular expression /re/              | ✅      |
 | ?re?    | The previous line containing re                                   | ❌      |
 | 'x      | The line previously marked by a k command, where x is the address | ✅      |
 
