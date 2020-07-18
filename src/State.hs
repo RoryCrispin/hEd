@@ -3,7 +3,8 @@ module State where
 import qualified Data.Map as Map
 import Control.Lens
 
-dSt = State ["l1", "l2", "l3", "l4"] 0 (Map.fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode
+dSt :: State
+dSt = State ["l1", "l2", "l3", "l4"] 0 (Map.fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode ""
 
 data HedMode = NormalMode | InsertMode
               deriving (Show, Eq)
@@ -12,7 +13,8 @@ data State = State {
   buffer :: [String],
   position :: Int,
   registers :: RegTable,
-  mode :: HedMode
+  mode :: HedMode,
+  lastRegex :: String
   } deriving (Show, Eq)
 
 newtype Location = Line Int
@@ -52,12 +54,7 @@ lookupReg key st = Map.lookup key (registers st)
 insertLine :: String -> State -> State
 insertLine str st = let newBuffer =
                           insertAt (position st) str (buffer st) in
-                      State {
-  buffer=newBuffer
-  , position=position st + 1
-  , registers=registers st
-  , mode=mode st
-  }
+                      st {buffer=newBuffer , position=position st + 1}
 
 insertAt pos new_element list =
   let (ys,zs) = splitAt pos list in ys ++ [new_element] ++ zs

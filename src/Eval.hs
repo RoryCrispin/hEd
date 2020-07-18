@@ -25,85 +25,53 @@ evaluate Command {op=Number, target=t} st =
     Just tgt -> (st, unlines tgt)
 
 evaluate Command {op=Delete, target=t} st =
-  (State{buffer = deleteTarget (buffer st) t, position = position st,
-         registers = registers st, mode = mode st}
+  ( st {buffer = deleteTarget (buffer st) t}
   , "OK")
 
-evaluate Command {op=Mark, target=t, params=p}
-  State {buffer=b, position=pos, registers=r} =
-  let newRegisters = updateReg (identToStr (head p)) (snd t) r in
-  ((State {
-       buffer=b
-       , position=pos
-       , registers=newRegisters
+evaluate Command {op=Mark, target=t, params=p} st =
+  let newRegisters = updateReg (identToStr (head p)) (snd t) (registers st) in
+  ((st {registers=newRegisters
        , mode=NormalMode
        }), "OK")
 
 -- The Goto command switches the current file position to the given
 -- location, and prints that line to stdout
-evaluate Command {op=Goto, target=tgt}
-  State {buffer=b, position=pos, registers=r} =
+evaluate Command {op=Goto, target=tgt} st =
   let newPosition = fst tgt in
-    case getTarget b (mkTarget newPosition) of
-    Nothing -> ((State {
-                          buffer=b
-                          , position=pos
-                          , registers=r
-                          , mode=NormalMode
-                          }),
-                       "Invalid target") -- Error
-    Just targetLineContents ->
-      ((State {
-           buffer=b
-           , position=locationToLine newPosition
-           , registers=r
-           , mode=NormalMode
-           }),
-        head targetLineContents)
+    case getTarget (buffer st) (mkTarget newPosition) of
+      Nothing -> (st, "Invalid target") -- Error
+      Just targetLineContents -> (
+        (st {position=locationToLine newPosition , mode=NormalMode}), head targetLineContents
+        )
 
 
 evaluate Command {op=After, target=tgt} st =
-  (State {
-      buffer=buffer st
-      , position=(locationToLine (fst tgt)) + 1
-      , registers=registers st
-      , mode=InsertMode
-      },
-    ">") -- TODO remove this str
+  (st {position=(locationToLine (fst tgt)) + 1
+      , mode=InsertMode}
+  , ">") -- TODO remove this str
 
 evaluate Command {op=Insert, target=tgt} st =
-  (State {
-      buffer = buffer st
-      , position = locationToLine (fst tgt)
-      , registers = registers st
+  (st {position = locationToLine (fst tgt)
       , mode = InsertMode}
-    , ">") -- TODO remove this str
+  , ">") -- TODO remove this str
 
 evaluate Command {op=Change, target=t} st =
-  (State {
+  (st {
       buffer = deleteTarget (buffer st) t
-      , position = position st
-      , registers = registers st
       , mode = InsertMode}
   , ">")
 
 evaluate Command {op=Join, target=t} st =
-  (State {
+  (st {
       buffer = joinLinesTarget t (buffer st)
-      , position = position st
-      , registers = registers st
       , mode = NormalMode}
   , "OK")
 
 evaluate Command {op=Move, target=t, params=p} st =
   case parseTarget p st of
-    Right (dst, _) -> case moveLinesTarget t (fst dst) (buffer st) of
+    Right (dst, _, newState) -> case moveLinesTarget t (fst dst) (buffer newState) of
       Just newBuf ->
-        (State {
-            buffer = newBuf
-            , position = position st
-            , registers = registers st
-            , mode = NormalMode}
+        (newState {buffer = newBuf, mode = NormalMode}
         , "OK")
       Nothing -> (st, "Invalid destination")
     Left e -> (st, e)
@@ -111,12 +79,11 @@ evaluate Command {op=Move, target=t, params=p} st =
 
 evaluate Command {op=Transfer, target=t, params=p} st =
   case parseTarget p st of
-    Right (dst, _) -> (State {
-            buffer = transferLinesTarget t (fst dst) (buffer st)
-            , position = position st
-            , registers = registers st
-            , mode = NormalMode}
-        , "OK")
+    Right (dst, _, newState) -> (
+      newState {
+          buffer = transferLinesTarget t (fst dst) (buffer newState)
+          , mode = NormalMode}
+      , "OK")
     Left e -> (st, e)
 
 

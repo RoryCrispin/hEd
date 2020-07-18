@@ -113,29 +113,30 @@ parseTokenLoc (TokChar i) st = lookupReg i st
 parseTokenLoc _ _ = Nothing
 
 
-parseTarget :: [Token] -> State -> Either String (Target, [Token])
-
-parseTarget ((TokRegexp s): xs) st = case (findRegexTarget s st) of
-  Right tgt -> Right (tgt, xs)
+parseTarget :: [Token] -> State -> Either String (Target, [Token], State)
+parseTarget ((TokRegexp re): xs) st = case (findRegexTarget re st) of
+  Right tgt -> Right (tgt, xs, st {lastRegex = nextRe} )
   Left err -> Left err
+  where nextRe = if re == "" then lastRegex st else re
 -- A single comma represnts the whole buffer
-parseTarget (TokKey Comma : xs) st = Right (fullBufferTarget st, xs)
-parseTarget (TokKey Semicolon : xs) st = Right (currentThroughLastTarget st, xs)
+parseTarget (TokKey Comma : xs) st = Right (fullBufferTarget st, xs, st)
+parseTarget (TokKey Semicolon : xs) st = Right (currentThroughLastTarget st, xs, st)
 
 parseTarget (a : TokKey Comma : b : xs) st =
   case parseTokenLoc a st of
     Just loc_a ->
       case parseTokenLoc b st of
-        Just loc_b -> Right ((loc_a, loc_b), xs)
+        Just loc_b -> Right ((loc_a, loc_b), xs, st)
         Nothing -> Left "Invalid right hand target"
     Nothing -> Left "Invalid left hand target"
 
 parseTarget (a :  xs) st =
   case parseTokenLoc a st of
-    Just loc -> Right (mkTarget loc, xs)
+    Just loc -> Right (mkTarget loc, xs, st)
     Nothing -> Left "Invalid target"
 
 findRegexTarget :: String -> State -> Either String Target
+findRegexTarget "" st = findRegexTarget (lastRegex st) st
 findRegexTarget re st = case findIndex (=~ re) fwd of
   Just i -> Right $ mkTarget $ Line (i + (position st + 1))
   Nothing -> case findIndex (=~ re) back of
@@ -143,25 +144,16 @@ findRegexTarget re st = case findIndex (=~ re) fwd of
     Nothing -> Left "Target not found" -- handle invalid regex?
   where (back, fwd) = splitAt (position st + 1) (buffer st)
 
--- Base case of no target = current line
--- parseTarget (TokIdent i : xs) st = case parseTokenLoc (TokIdent i) st of
---                                      Just loc -> Right (mkTarget loc, xs)
---                                      Nothing -> Left "Invalid target"
--- parseTarget xs st = Right (mkTarget (Line (position st)), xs)
-
-
-baseParser :: [Token] -> State -> Either String Command
+baseParser :: [Token] -> State -> Either String (Command, State)
 baseParser xs st =
   case parseTarget xs st of
-    Right (tgt, tkns) -> case cmdParser (tgt, tkns) of
-                            Right cmd -> Right cmd
+    Right (tgt, tkns, newState) -> case cmdParser (tgt, tkns) of
+                            Right cmd -> Right (cmd, newState)
                             Left err -> Left err
     Left err -> Left err
 
--- TODO do we need to return State or is it readonly
-ee :: String -> State -> (Either String Command, State)
-ee s st = (baseParser (tokenize s) st, st)
-
+ee :: String -> State -> Either String (Command, State)
+ee s st = baseParser (tokenize s) st
 
 -- get rid of this
 identToStr (TokChar n) = n
