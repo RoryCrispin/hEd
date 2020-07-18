@@ -97,7 +97,7 @@ evaluate Command {op=Join, target=t} st =
 
 evaluate Command {op=Move, target=t, params=p} st =
   case parseTarget p st of
-    Left (dst, _) -> case moveLinesTarget t (fst dst) (buffer st) of
+    Right (dst, _) -> case moveLinesTarget t (fst dst) (buffer st) of
       Just newBuf ->
         (State {
             buffer = newBuf
@@ -106,18 +106,18 @@ evaluate Command {op=Move, target=t, params=p} st =
             , mode = NormalMode}
         , "OK")
       Nothing -> (st, "Invalid destination")
-    Right e -> (st, e)
+    Left e -> (st, e)
 -- Maybe the targets in these params should be parsed properly, or evaluate should return a Maybe
 
 evaluate Command {op=Transfer, target=t, params=p} st =
   case parseTarget p st of
-    Left (dst, _) -> (State {
+    Right (dst, _) -> (State {
             buffer = transferLinesTarget t (fst dst) (buffer st)
             , position = position st
             , registers = registers st
             , mode = NormalMode}
         , "OK")
-    Right e -> (st, e)
+    Left e -> (st, e)
 
 
 evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"

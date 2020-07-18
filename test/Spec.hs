@@ -27,71 +27,71 @@ main = hspec $ do
       tokenize "1,2t4" `shouldBe` [TokNum 1, TokKey Comma, TokNum 2, TokChar 't', TokNum 4]
   describe "Parse Target" $ do
     it "Parses numeric range" $ do
-      parseTarget [TokNum 1, TokKey Comma, TokNum 2] emptyState `shouldBe` Left ((Line 1, Line 2), [])
-      parseTarget [TokNum 10, TokKey Comma, TokNum 2] emptyState `shouldBe` Left ((Line 10, Line 2), [])
+      parseTarget [TokNum 1, TokKey Comma, TokNum 2] emptyState `shouldBe` Right ((Line 1, Line 2), [])
+      parseTarget [TokNum 10, TokKey Comma, TokNum 2] emptyState `shouldBe` Right ((Line 10, Line 2), [])
 
     it "Parses alpha and numeric tokens" $ do
-      parseTarget [TokNum 1, TokKey  Comma, TokChar 'a'] emptyState `shouldBe` Right "Invalid right hand target"
-      parseTarget [TokChar 'a', TokKey Comma, TokNum 1] emptyState `shouldBe` Right "Invalid left hand target"
+      parseTarget [TokNum 1, TokKey  Comma, TokChar 'a'] emptyState `shouldBe` Left "Invalid right hand target"
+      parseTarget [TokChar 'a', TokKey Comma, TokNum 1] emptyState `shouldBe` Left "Invalid left hand target"
 
     it "Parses single numgers" $ do
-      parseTarget [TokNum 1, TokChar 'p'] emptyState `shouldBe` Left ((Line 1, Line 1), [TokChar 'p'])
-      parseTarget [TokChar 'a', TokChar 'p'] emptyState `shouldBe` Right "Invalid target"
+      parseTarget [TokNum 1, TokChar 'p'] emptyState `shouldBe` Right ((Line 1, Line 1), [TokChar 'p'])
+      parseTarget [TokChar 'a', TokChar 'p'] emptyState `shouldBe` Left "Invalid target"
 
     it "Parses the dollar as last line" $
-      parseTarget [TokChar '$'] dummyState `shouldBe` Left ((Line 3, Line 3), [])
+      parseTarget [TokChar '$'] dummyState `shouldBe` Right ((Line 3, Line 3), [])
     xit "Parses the comma as first through last lines" $
-      parseTarget [TokChar ','] dummyState `shouldBe` Left ((Line 0, Line 3), [])
+      parseTarget [TokChar ','] dummyState `shouldBe` Right ((Line 0, Line 3), [])
 
   describe "Parse with reg table" $
     it "" $ do
-      parseTarget [TokNum 2, TokKey  Comma, TokChar 'a'] dummyState `shouldBe` Left ((Line 2, Line 1), [])
-      parseTarget [TokChar 'a', TokKey  Comma, TokNum 2] dummyState `shouldBe` Left ((Line 1, Line 2), [])
-      parseTarget [TokChar 'a', TokKey  Comma, TokChar 'b'] dummyState `shouldBe` Left ((Line 1, Line 2), [])
+      parseTarget [TokNum 2, TokKey  Comma, TokChar 'a'] dummyState `shouldBe` Right ((Line 2, Line 1), [])
+      parseTarget [TokChar 'a', TokKey  Comma, TokNum 2] dummyState `shouldBe` Right ((Line 1, Line 2), [])
+      parseTarget [TokChar 'a', TokKey  Comma, TokChar 'b'] dummyState `shouldBe` Right ((Line 1, Line 2), [])
 
   describe "Print command" $ do
     it "Prints the target" $ do -- this is the mark command...
       ee "3kx" emptyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Mark [TokChar 'x']))
+        (Right (Command (Line 3, Line 3) Mark [TokChar 'x']))
         , emptyState)
       ee "bp" dummyState `shouldBe` (
-        (Left (Command (Line 2, Line 2) Print []))
+        (Right (Command (Line 2, Line 2) Print []))
         , dummyState)
       ee "+3p" dummyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Print []))
+        (Right (Command (Line 3, Line 3) Print []))
         , dummyState)
       ee "-3p" dummyState `shouldBe` (
-        (Left (Command (Line (-3), Line (-3)) Print []))
+        (Right (Command (Line (-3), Line (-3)) Print []))
         , dummyState)
       ee "$p" dummyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Print []))
+        (Right (Command (Line 3, Line 3) Print []))
         , dummyState)
       ee ",p" dummyState `shouldBe` (
-        (Left (Command (Line 0, Line 3) Print []))
+        (Right (Command (Line 0, Line 3) Print []))
         , dummyState)
       ee ";p" dummyState `shouldBe` (
-        (Left (Command (Line 0, Line 3) Print []))
+        (Right (Command (Line 0, Line 3) Print []))
         , dummyState)
       ee "1,2mj" dummyState `shouldBe` (
-        (Left (Command (Line 1, Line 2) Move [TokChar 'j']))
+        (Right (Command (Line 1, Line 2) Move [TokChar 'j']))
         , dummyState)
       ee "1,2tj" dummyState `shouldBe` (
-        (Left (Command (Line 1, Line 2) Transfer [TokChar 'j']))
+        (Right (Command (Line 1, Line 2) Transfer [TokChar 'j']))
         , dummyState)
       ee "1,2m3" dummyState `shouldBe` (
-        (Left (Command (Line 1, Line 2) Move [TokNum 3]))
+        (Right (Command (Line 1, Line 2) Move [TokNum 3]))
         , dummyState)
       ee "1,2t3" dummyState `shouldBe` (
-        (Left (Command (Line 1, Line 2) Transfer [TokNum 3]))
+        (Right (Command (Line 1, Line 2) Transfer [TokNum 3]))
         , dummyState)
 
     it "Should accept registers with names conflicting with functions" $ do
       ee "3ka" emptyState `shouldBe` (
-        (Left (Command (Line 3, Line 3) Mark [TokChar 'a']))
+        (Right (Command (Line 3, Line 3) Mark [TokChar 'a']))
         , emptyState)
     it "Should accept register notation in otherwise ambiguous commands" $ do
       ee "'pp" dummyState `shouldBe` (
-        (Left (Command (Line 2, Line 2) Print []))
+        (Right (Command (Line 2, Line 2) Print []))
         , dummyState)
 
   describe "After command" $ do
@@ -136,11 +136,11 @@ main = hspec $ do
     it "parses regexp strings" $ do
       tokenize "/some string/p" `shouldBe` [TokRegexp "some string", TokChar 'p']
     it "finds the correct line" $ do
-      findRegexTarget "3" dummyState `shouldBe` Left (Line 2, Line 2)
+      findRegexTarget "3" dummyState `shouldBe` Right (Line 2, Line 2)
     it "searches forward from current line" $ do
-      findRegexTarget "r" dummyState2 `shouldBe` Left (Line 3, Line 3)
+      findRegexTarget "r" dummyState2 `shouldBe` Right (Line 3, Line 3)
     it "Looks forward" $ do
-      findRegexTarget "o" dummyState2 `shouldBe` Left (Line 3, Line 3)
+      findRegexTarget "o" dummyState2 `shouldBe` Right (Line 3, Line 3)
     it "Looks backwards" $ do
-      findRegexTarget "One" dummyState2 `shouldBe` Left (Line 0, Line 0)
+      findRegexTarget "One" dummyState2 `shouldBe` Right (Line 0, Line 0)
 

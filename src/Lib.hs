@@ -21,11 +21,11 @@ printLoop st = do
     case mode st of
         NormalMode -> let (parsedCmd, newParserState) = ee input st in
                         case parsedCmd of
-                            Left cmd -> let (newState, out) = evaluate cmd newParserState in
+                            Right cmd -> let (newState, out) = evaluate cmd newParserState in
                                           do putStrLn out
                                              printLoop newState
-                            Right err -> do putStrLn err
-                                            printLoop st
+                            Left err -> do putStrLn err
+                                           printLoop st
         InsertMode -> case tokenizeInsertMode input of
                           Just str -> printLoop (insertLine str st)
                           Nothing -> printLoop
