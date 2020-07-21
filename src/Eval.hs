@@ -19,6 +19,9 @@ evaluate Command {op = Print, target = t} st =
     Nothing -> (st, "Invalid target")
     Just tgt -> (st, unlines tgt)
 
+evaluate Command {op=Substitute, target=t, params=p} st
+  | length p == 2 = (st, "pass")
+
 evaluate Command {op=Number, target=t} st =
   case getTarget (alle (buffer st) 0) t of
     Nothing -> (st, "Invalid target")

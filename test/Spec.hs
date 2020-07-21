@@ -111,8 +111,10 @@ main = hspec $ do
       evaluate (Command (Line 3, Line 3) Print []) dummyState `shouldBe` (dummyState, "l3\n")
 
   describe "Test Regexp" $ do
-    it "parses regexp strings" $
+    it "parses regexp strings" $ do
       tokenize "/some string/p" `shouldBe` [TokRegexp "some string", TokChar 'p']
+      tokenize "/bob/ross/g" `shouldBe` [TokRegexp "bob",  TokRegexp "ross", TokChar 'g']
+      tokenize "s/bob/ross/g" `shouldBe` [TokChar 's', TokRegexp "bob",  TokRegexp "ross", TokChar 'g']
     it "finds the correct line" $
       findRegexTarget "3" dummyState `shouldBe` Right (Line 2, Line 2)
     it "searches forward from current line" $
@@ -125,3 +127,9 @@ main = hspec $ do
       ee "/3/" dummyState `shouldBe` Right (Command (Line 2, Line 2) Goto [], dummyState {lastRegex = "3"})
     it "Reuses the last regex" $
       ee "//p" dummyState {lastRegex = "3"} `shouldBe` Right (Command (Line 2, Line 2) Print [], dummyState { lastRegex = "3"})
+    it "parses substitute command" $
+      baseParser (tokenize "s/3/4/g") dummyState `shouldBe` Right (Command {target = (Line 2, Line 2), op=Substitute, params = [TokRegexp "3", TokRegexp "4", TokChar 'g']}, dummyState {lastRegex="3"})
+
+  describe "Test substitution" $ do
+    it "Parses backreferences" $
+      head (tokenizeRegexReplacement "\\1234bob") `shouldBe` TokBackref 1234

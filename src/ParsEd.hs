@@ -17,6 +17,7 @@ data Operator = QuitUnconditionally
   | Number
   | Print
   | Transfer
+  | Substitute
   deriving (Show, Eq)
 
 data Keyword = Comma
@@ -29,6 +30,11 @@ data Token = TokNum Int
   | TokChar Char
   | TokOffset Int
   | TokRegexp String
+  deriving (Show, Eq)
+
+data SubstituteToken = STokString String
+  | STokBackref Int
+  | STokSpecial Char
   deriving (Show, Eq)
 
 operator :: Char -> Maybe Operator
@@ -44,15 +50,29 @@ operator c
   | c == 'p' = Just Print
   | c == 't' = Just Transfer
   | c == 'Q' = Just QuitUnconditionally
+  | c == 's' = Just Substitute
   | otherwise = Nothing
 
 keyword :: Char -> Maybe Keyword
 keyword k  | k == ',' = Just Comma
            | otherwise = Nothing
 
+tokenizeRegexReplacement :: String -> [SubstituteToken]
+tokenizeRegexReplacement [] = []
+tokenizeRegexReplacement ('\\' : x : xs)
+  | x == 'n' = STokSpecial '\n' : tokenizeRegexReplacement xs
+  | isDigit x = STokBackref num : tokenizeRegexReplacement extras
+     where (num, extras) = consumeNumber x xs
+tokenizeRegexReplacement (x : xs) = STokString strs : tokenizeRegexReplacement extras
+  where (strs, extras) = consumeString x xs
+
+
 tokenize :: String -> [Token]
 tokenize [] = []
-tokenize  ('/': cs) = parseRegexp cs
+-- TODO rc need to backtrack if we try to parse a regexp and it doesn't find a trailing /
+tokenize  ('/': cs) = case parseRegexp cs of
+  Just t -> t
+  Nothing -> tokenize cs
 tokenize  ('+' : c : cs) = if isDigit c then numberOffset c cs else TokOffset 1 : tokenize  (c : cs)
 tokenize  ('-' : c : cs) = if isDigit c then numberOffset '-' (c : cs) else TokOffset (-1) : tokenize  (c : cs)
 tokenize ('\'' : c : cs) = TokReg c : tokenize cs
@@ -67,11 +87,14 @@ tokenizeInsertMode :: String -> Maybe String
 tokenizeInsertMode ('.' : _) = Nothing
 tokenizeInsertMode xs = Just xs
 
-parseRegexp :: String -> [Token]
+parseRegexp :: String -> Maybe [Token]
 parseRegexp cs =
   let (regexpStr, extras) = span regexpChar cs in
-    (TokRegexp regexpStr) : tokenize (tail extras)
-  where regexpChar = \x -> x /= '/' -- todo rc fix escaping regexes
+    -- TokRegexp regexpStr : if null extras then [] else tokenize (tail extras)
+    if not (null extras) && head extras == '/' then
+      Just $ TokRegexp regexpStr : tokenize extras
+      else Nothing
+  where regexpChar = (/=) '/' -- todo rc fix escaping regexes
 
 
 -- There is a pattern here.. Go and revise the solution
@@ -79,6 +102,17 @@ number :: Char -> String -> [Token]
 number c cs =
   let (digs, cs') = span isDigit cs in
     TokNum (read (c : digs)) : tokenize cs'
+
+
+consumeNumber :: Char -> String -> (Int, String)
+consumeNumber c cs =
+  let (digs, cs') = span isDigit cs in
+    ((read (c : digs)), cs')
+
+consumeString :: Char -> String -> (String, String)
+consumeString c cs = let (chars, cs') = span safeChar cs in
+                       ((c: chars), cs')
+  where safeChar k = not (isDigit k) && k /= '\\' && k /= '&'
 
 numberOffset :: Char -> String -> [Token]
 numberOffset c cs =
@@ -145,6 +179,10 @@ findRegexTarget re st = case findIndex (=~ re) fwd of
   where (back, fwd) = splitAt (position st + 1) (buffer st)
 
 baseParser :: [Token] -> State -> Either String (Command, State)
+baseParser (TokChar 's' : xs) st =
+  case parseTarget xs st of
+    Right (tgt, _, newState) -> Right (Command tgt Substitute xs, newState)
+    Left err -> Left err
 baseParser xs st =
   case parseTarget xs st of
     Right (tgt, tkns, newState) -> case cmdParser (tgt, tkns) of
@@ -153,7 +191,7 @@ baseParser xs st =
     Left err -> Left err
 
 ee :: String -> State -> Either String (Command, State)
-ee s st = baseParser (tokenize s) st
+ee s = baseParser (tokenize s)
 
 -- get rid of this
 identToStr (TokChar n) = n
