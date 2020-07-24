@@ -1,9 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+
+
 module ParsEd where
 import Data.Char
 import State
 import Data.List
-import Text.Regex.TDFA
 
+import Control.Lens
+import Control.Lens.Regex.Text
+import Text.Regex.PCRE.Heavy
+
+import qualified Data.ByteString as B
+import qualified Data.Text as T
+import Data.Text.Encoding (encodeUtf8)
+
+packStr'' :: String -> B.ByteString
+packStr'' = encodeUtf8 . T.pack
 
 data Operator = QuitUnconditionally
   | After
@@ -37,6 +50,8 @@ data SubstituteToken = STokString String
   | STokSpecial Char
   deriving (Show, Eq)
 
+type Subs = [SubstituteToken]
+
 operator :: Char -> Maybe Operator
 operator c
   | c == 'a' = Just After
@@ -67,6 +82,22 @@ tokenizeRegexReplacement (x : xs) = STokString strs : tokenizeRegexReplacement e
   where (strs, extras) = consumeString x xs
 
 
+-- TODO rc complexity improvements
+readRegexReplacement :: Token -> Subs -> T.Text -> T.Text
+readRegexReplacement _ [] str = ""
+readRegexReplacement reStr (STokString s : xs) str = (T.pack s) <> readRegexReplacement reStr xs str
+readRegexReplacement (TokRegexp reStr) (STokBackref r : xs) str = case compileM (packStr'' reStr) [] of
+  Left err -> "" -- TODO raise exception?
+  Right re -> (str ^?! (regexing re) . groups . traversed . index r)  <> readRegexReplacement (TokRegexp reStr) xs str
+  -- TODO rc use safe search (not !)
+
+
+-- notes:
+-- txt ^.. [regex|\w+|] . indices (`elem` [1,2]) . match
+-- txt ^.. [regex|\w+|] . index 1 . match
+-- readRegexReplacement (TokRegexp "(x)bob([0-9]+)") [(STokBackref 0), (STokBackref 1)] (T.pack "xbob123 hello")
+--  "xbob123 hello" ^?! [regex|(x)bob([0-9]+)|] . groups . traversed . index 1
+
 tokenize :: String -> [Token]
 tokenize [] = []
 -- TODO rc need to backtrack if we try to parse a regexp and it doesn't find a trailing /
@@ -77,8 +108,8 @@ tokenize  ('+' : c : cs) = if isDigit c then numberOffset c cs else TokOffset 1 
 tokenize  ('-' : c : cs) = if isDigit c then numberOffset '-' (c : cs) else TokOffset (-1) : tokenize  (c : cs)
 tokenize ('\'' : c : cs) = TokReg c : tokenize cs
 tokenize (c : cs)
-  | c `elem` "," = TokKey Comma : tokenize cs
-  | c `elem` ";" = TokKey Semicolon : tokenize cs
+  | c == ',' = TokKey Comma : tokenize cs
+  | c == ';' = TokKey Semicolon : tokenize cs
   | isDigit c = number c cs
   | isSpace c = tokenize cs
   | otherwise = TokChar c : tokenize cs
@@ -171,11 +202,13 @@ parseTarget (a :  xs) st =
 
 findRegexTarget :: String -> State -> Either String Target
 findRegexTarget "" st = findRegexTarget (lastRegex st) st
-findRegexTarget re st = case findIndex (=~ re) fwd of
-  Just i -> Right $ mkTarget $ Line (i + (position st + 1))
-  Nothing -> case findIndex (=~ re) back of
-    Just i -> Right $ mkTarget $ Line i
-    Nothing -> Left "Target not found" -- handle invalid regex?
+findRegexTarget reStr st = case compileM (packStr'' reStr) [] of
+  Left err -> Left err
+  Right re -> case findIndex (has (regexing re)) fwd of
+    Just i -> Right $ mkTarget $ Line (i + (position st + 1))
+    Nothing -> case findIndex (=~ re) back of
+      Just i -> Right $ mkTarget $ Line i
+      Nothing -> Left "Target not found" -- handle invalid regex?
   where (back, fwd) = splitAt (position st + 1) (buffer st)
 
 baseParser :: [Token] -> State -> Either String (Command, State)

@@ -1,3 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+
+import qualified Data.Text as T
+
 import Test.Hspec
 import ParsEd
 import Lib
@@ -71,6 +76,9 @@ main = hspec $ do
       ee "'pp" dummyState `shouldBe` (
         Right ((Command (Line 2, Line 2) Print [])
         , dummyState))
+  describe "Number command" $
+    it "evaluates" $
+      evaluate (Command (Line 3, Line 3) Number []) dummyState `shouldBe` (dummyState, "3 l4\n")
 
   describe "After command" $
     it "evaluates" $
@@ -132,4 +140,10 @@ main = hspec $ do
 
   describe "Test substitution" $ do
     it "Parses backreferences" $
-      head (tokenizeRegexReplacement "\\1234bob") `shouldBe` TokBackref 1234
+      head (tokenizeRegexReplacement "\\1234bob") `shouldBe` STokBackref 1234
+  describe "Substitution eval" $ do
+    it "Replaces" $
+      (
+        readRegexReplacement (TokRegexp "(x)bob([0-9]+)") [(STokBackref 0), (STokString " STR "), (STokBackref 1), (STokBackref 0)] (T.pack "xbob123 hello")
+       `shouldBe` "x STR 123x"
+       )

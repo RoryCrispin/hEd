@@ -1,5 +1,8 @@
 module Lib where
 
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+
 import System.IO
 import ParsEd
 import State
@@ -8,8 +11,8 @@ import Eval
 bob :: [String] -> IO()
 bob args = do
     handle <- openFile (head args) ReadMode
-    contents <- hGetContents handle
-    let ln = lines contents
+    contents <- T.hGetContents handle
+    let ln = T.lines contents
     printLoop (State ln 0 emptyRegTable NormalMode "")
     hClose handle
 
@@ -27,6 +30,6 @@ printLoop st = do
                             Left err -> do putStrLn err
                                            printLoop st
         InsertMode -> case tokenizeInsertMode input of
-                          Just str -> printLoop (insertLine str st)
+                          Just str -> printLoop (insertLine (T.pack str) st)
                           Nothing -> printLoop
                                        st {mode = NormalMode}

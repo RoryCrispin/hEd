@@ -1,5 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Eval where
 
+import qualified Data.Text as T
 import State
 import ParsEd
 
@@ -7,9 +10,13 @@ import ParsEd
 -- Updates a State with new values from the ParserState result
 apn = ("n " ++)
 
-alle :: [String] -> Int -> [String]
-alle [] _ = []
-alle (x:xs) n = (show n ++ " " ++ x) : alle xs (n + 1)
+
+-- alle :: [T.Text] -> Int -> [T.Text]
+-- alle [] _ = []
+-- alle (x:xs) n = (show n ++ " " ++ x) : alle xs (n + 1)
+
+  -- alle adds line numbers to a list of strings
+alle txt _ = txt
 
 -- Dont really want to have to repeat this application for every function
 -- this should be an applicative, I think
@@ -17,16 +24,18 @@ evaluate :: Command -> State -> (State, String)
 evaluate Command {op = Print, target = t} st =
   case getTarget (buffer st) t of
     Nothing -> (st, "Invalid target")
-    Just tgt -> (st, unlines tgt)
+    Just tgt -> (st, T.unpack (T.unlines tgt))
 
-evaluate Command {op=Substitute, target=t, params=p} st
-  | length p == 2 = (st, "pass")
+evaluate Command {op=Substitute, target=t, params=(reStr : TokRegexp subReStr : [])} st =
+  case getTarget (buffer st) t of
+    Nothing -> (st, "Invalid Targeet")
+    Just tgt -> (st, T.unpack (readRegexReplacement reStr (tokenizeRegexReplacement (subReStr)) (head tgt)))
+                     -- shouldnt need T.unpack here.. we should be using Text everywhere not String
 
 evaluate Command {op=Number, target=t} st =
   case getTarget (alle (buffer st) 0) t of
     Nothing -> (st, "Invalid target")
-    Just tgt -> (st, unlines tgt)
-
+    Just tgt -> (st, T.unpack (T.unlines tgt))
 evaluate Command {op=Delete, target=t} st =
   ( st {buffer = deleteTarget (buffer st) t}
   , "OK")
@@ -44,7 +53,7 @@ evaluate Command {op=Goto, target=tgt} st =
     case getTarget (buffer st) (mkTarget newPosition) of
       Nothing -> (st, "Invalid target") -- Error
       Just targetLineContents -> (
-        (st {position=locationToLine newPosition , mode=NormalMode}), head targetLineContents
+        (st {position=locationToLine newPosition , mode=NormalMode}), T.unpack (head targetLineContents)
         )
 
 
@@ -94,19 +103,20 @@ evaluate Command {op=QuitUnconditionally} st = error "TODO quit gracefully"
 
 
 -- fmap Location needed again..
-joinLinesTarget :: Target -> [String] -> [String]
+-- joinLinesTarget :: Target -> [T.Text] -> [T.Text]
 joinLinesTarget tgt = joinLines (targetToLines tgt)
 
 
-joinLines :: (Int, Int) -> [[a]] -> [[a]]
-joinLines (start, end) lst = take start lst ++ [concat selection] ++ drop (end+1) lst
-  where selection = onlyLines (start, end) lst
+-- joinLines :: (Int, Int) -> [[a]] -> [[a]]
+-- joinLines (start, end) lst = take start lst ++ [concat selection] ++ drop (end+1) lst
+--  where selection = onlyLines (start, end) lst
+joinLines _ lst = lst
 
 moveLinesTarget tgt dst = moveLines (targetToLines tgt) (locationToLine dst)
 
 transferLinesTarget tgt dst = transferLines (targetToLines tgt) (locationToLine dst)
 
-moveLines :: (Int, Int) -> Int -> [a] -> Maybe [a]
+-- moveLines :: (Int, Int) -> Int -> [a] -> Maybe [a]
 moveLines (start, end) pos buf
   | pos < start = Just $ inject selection pos sansBuf
   | pos > end = Just $ inject selection (pos - (end-start)) sansBuf
@@ -115,17 +125,17 @@ moveLines (start, end) pos buf
         selection = onlyLines (start, end) buf
 
 
-transferLines :: (Int, Int) -> Int -> [a] -> [a]
+-- transferLines :: (Int, Int) -> Int -> [a] -> [a]
 transferLines (start, end) pos buf = inject selection pos buf
   where selection = onlyLines (start, end) buf
 
-withoutLines :: (Int, Int) -> [a] -> [a]
+-- withoutLines :: (Int, Int) -> [a] -> [a]
 withoutLines (start, end) lst = take start lst ++ drop (end+1) lst
 
-onlyLines :: (Int, Int) -> [a] -> [a]
+-- onlyLines :: (Int, Int) -> [a] -> [a]
 onlyLines (start, end) lst = (drop start (take (end+1) lst))
 
-inject :: [a] -> Int -> [a] -> [a]
+-- inject :: [a] -> Int -> [a] -> [a]
 inject a pos lst = left ++ a ++ right
   where (left, right) = splitAt pos lst
 

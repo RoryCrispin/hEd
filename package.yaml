@@ -25,6 +25,10 @@ dependencies:
 - lens
 - hspec
 - regex-tdfa
+- lens-regex-pcre == 1.1.0.0
+- pcre-heavy
+- text
+- bytestring
 
 library:
   source-dirs: src

@@ -1,7 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module State where
 
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import Control.Lens
+
+
 
 dSt :: State
 dSt = State ["l1", "l2", "l3", "l4"] 0 (Map.fromList [('a', Line 1), ('b', Line 2), ('p', Line 2)]) NormalMode ""
@@ -10,7 +15,7 @@ data HedMode = NormalMode | InsertMode
               deriving (Show, Eq)
 
 data State = State {
-  buffer :: [String],
+  buffer :: [T.Text],
   position :: Int,
   registers :: RegTable,
   mode :: HedMode,
@@ -51,7 +56,7 @@ lookupReg '$' st = Just (Line (length (buffer st) - 1)) -- The last line
 lookupReg key st = Map.lookup key (registers st)
 
 -- Buffer manipulation
-insertLine :: String -> State -> State
+-- insertLine :: T.Text -> State -> State
 insertLine str st = let newBuffer =
                           insertAt (position st) str (buffer st) in
                       st {buffer=newBuffer , position=position st + 1}
@@ -59,7 +64,7 @@ insertLine str st = let newBuffer =
 insertAt pos new_element list =
   let (ys,zs) = splitAt pos list in ys ++ [new_element] ++ zs
 
-getTarget :: [a] -> Target -> Maybe [a]
+-- getTarget :: [a] -> Target -> Maybe [a]
 getTarget xs (topLoc, bottomLoc) =
   let top = locationToLine topLoc in
     let bottom = locationToLine bottomLoc in
