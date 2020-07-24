@@ -142,8 +142,13 @@ main = hspec $ do
     it "Parses backreferences" $
       head (tokenizeRegexReplacement "\\1234bob") `shouldBe` STokBackref 1234
   describe "Substitution eval" $ do
-    it "Replaces" $
+    it "Replaces" $ do
       (
         readRegexReplacement (TokRegexp "(x)bob([0-9]+)") [(STokBackref 0), (STokString " STR "), (STokBackref 1), (STokBackref 0)] (T.pack "xbob123 hello")
        `shouldBe` "x STR 123x"
        )
+    it "parses" $ do
+      ee "s/l(.)/xxxx\\0\\0\\0\\0xxxx/" dSt `shouldBe` Right (Command {target = (Line 1,Line 1), op = Substitute, params = [TokRegexp "l(.)",TokRegexp "xxxx\\0\\0\\0\\0xxxx"]},State {buffer = ["l1","l2","l3","l4"], position = 0, registers = fromList [('a',Line 1),('b',Line 2),('p',Line 2)], mode = NormalMode, lastRegex = "l(.)"})
+    it "replaces second" $ do
+       evaluate (Command {target = (Line 1,Line 1), op = Substitute, params = [TokRegexp "l(.)",TokRegexp "xxxx\\0\\0\\0\\0xxxx"]}) cmdState `shouldBe` (cmdState, "xxxx2222xxxx")
+       where cmdState =  (State {buffer = ["l1","l2","l3","l4"], position = 0, registers = fromList [('a',Line 1),('b',Line 2),('p',Line 2)], mode = NormalMode, lastRegex = "l(.)"})

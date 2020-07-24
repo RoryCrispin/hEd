@@ -91,6 +91,11 @@ readRegexReplacement (TokRegexp reStr) (STokBackref r : xs) str = case compileM 
   Right re -> (str ^?! (regexing re) . groups . traversed . index r)  <> readRegexReplacement (TokRegexp reStr) xs str
   -- TODO rc use safe search (not !)
 
+makeRegexRepl :: Token -> Subs -> T.Text -> T.Text
+makeRegexRepl (TokRegexp reStr) subs str = case compileM (packStr'' reStr) [] of
+  Left err -> ""
+  Right re -> (str & (regexing re) . match .~ (readRegexReplacement (TokRegexp reStr) subs str))
+
 
 -- notes:
 -- txt ^.. [regex|\w+|] . indices (`elem` [1,2]) . match

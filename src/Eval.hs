@@ -29,7 +29,7 @@ evaluate Command {op = Print, target = t} st =
 evaluate Command {op=Substitute, target=t, params=(reStr : TokRegexp subReStr : [])} st =
   case getTarget (buffer st) t of
     Nothing -> (st, "Invalid Targeet")
-    Just tgt -> (st, T.unpack (readRegexReplacement reStr (tokenizeRegexReplacement (subReStr)) (head tgt)))
+    Just tgt -> (st, T.unpack (makeRegexRepl reStr (tokenizeRegexReplacement (subReStr)) (head tgt)))
                      -- shouldnt need T.unpack here.. we should be using Text everywhere not String
 
 evaluate Command {op=Number, target=t} st =
